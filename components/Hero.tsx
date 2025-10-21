@@ -40,27 +40,24 @@ export default function Hero() {
       return
     }
 
-    if (typeof window === 'undefined') return; // prevent SSR mismatch
-
-    // Select Phantom wallet
-    select(PhantomWalletName)
-
-    // Wait a bit for selection
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    if (!wallet) {
-      console.error("No wallet selected. Please choose Phantom.");
-      alert('No wallet selected. Please ensure Phantom is installed.');
-      return;
-    }
-
     try {
-      console.log('Attempting to connect to wallet:', wallet.adapter.name)
-      await connect()
-      console.log('Connected successfully to', wallet.adapter.name, 'with public key:', publicKey?.toString())
+      if (typeof window === 'undefined') return;
+
+      // Wait until wallet is ready
+      if (!wallet || wallet.readyState === 'Unsupported') {
+        console.warn("Phantom not ready yet... retrying");
+        setTimeout(() => handleConnect(), 300);
+        return;
+      }
+
+      // Attempt connection if not already connected
+      if (!connected) {
+        await connect();
+      }
+
+      console.log("✅ Connected to:", wallet.adapter?.name, publicKey?.toBase58());
     } catch (error) {
-      console.error('Connection failed:', error)
-      alert(`Connection failed: ${(error as Error).message || 'Unknown error'}`)
+      console.error('Connection failed:', error);
     }
   }
 
