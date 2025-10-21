@@ -12,7 +12,7 @@ export default function Hero() {
   const [token, setToken] = useState<string | null>(null);
   const { wallets, select, connected, connect, publicKey } = useWallet();
   const router = useRouter();
-  const { connectMobilePhantom } = useMobileConnect();
+  const { connectMobilePhantom, downloadModalOpen } = useMobileConnect();
 
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
@@ -41,11 +41,10 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: open Phantom app via deep link
       connectMobilePhantom();
     } else {
       // Desktop: auto-select Phantom and connect
-      const phantomWallet = wallets.find(wallet => wallet.adapter.name === "Phantom");
+      const phantomWallet = wallets.find((wallet) => wallet.adapter.name === "Phantom");
       if (!phantomWallet) {
         alert("Please install Phantom wallet to continue.");
         return;
@@ -85,7 +84,13 @@ export default function Hero() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight"
         >
-          Your trusted <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="inline w-8 h-8 rounded-full align-baseline" /> loan companion
+          Your trusted{" "}
+          <img
+            src="/images/phantom-wallet-logo.png"
+            alt="Phantom"
+            className="inline w-8 h-8 rounded-full align-baseline"
+          />{" "}
+          loan companion
         </motion.h1>
 
         <motion.button
@@ -97,7 +102,11 @@ export default function Hero() {
           className="flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation"
           onClick={handleConnect}
         >
-          <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
+          <img
+            src="/images/phantom-wallet-logo.png"
+            alt="Phantom"
+            className="w-6 h-6 rounded-full mr-2"
+          />
           {connected ? "Connected" : "Connect Phantom"}
         </motion.button>
 
@@ -133,6 +142,26 @@ export default function Hero() {
           </div>
         </motion.div>
       </div>
+
+      {/* Download Modal for mobile if Phantom is not detected */}
+      {downloadModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-xs text-center">
+            <h2 className="text-lg font-bold mb-4">Phantom Wallet Not Detected</h2>
+            <p className="text-sm mb-6">
+              It seems you don’t have Phantom installed. Please download the wallet to continue.
+            </p>
+            <a
+              href="https://phantom.app/download"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+            >
+              Download Phantom
+            </a>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

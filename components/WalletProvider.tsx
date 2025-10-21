@@ -1,10 +1,8 @@
 "use client";
 
-// WalletProvider.tsx - Phantom wallet integration for Next.js web projects
-// Desktop: Auto-select Phantom, alert if not installed
-// Mobile: Iframe deep link to open Phantom app, timeout fallback to download
+// WalletProvider.tsx - Production-ready Phantom wallet integration for Next.js
 
-import React, { FC, ReactNode, useMemo } from "react";
+import React, { FC, ReactNode, useMemo, useState } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
@@ -15,7 +13,7 @@ interface Props {
 }
 
 export const WalletConnectionProvider: FC<Props> = ({ children }) => {
-  // Detect mobile devices
+  // Detect mobile devices (iOS/Android)
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent.toLowerCase();
@@ -29,11 +27,11 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
   const wallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
 
   if (isMobile) {
-    // Mobile: only connection context
+    // Mobile: just provide connection context
     return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
   }
 
-  // Desktop: WalletProvider with Phantom
+  // Desktop: WalletProvider with autoConnect
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
@@ -43,40 +41,49 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
   );
 };
 
-// Mobile Phantom connection hook with visibilitychange detection
-export const useMobileConnect = (): { connectMobilePhantom: () => void } => {
+// Mobile Phantom connection hook
+export const useMobileConnect = (): { connectMobilePhantom: () => void; downloadModalOpen: boolean } => {
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  let inProgress = false; // debounce multiple clicks
+
   const connectMobilePhantom = () => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || inProgress) return;
+    inProgress = true;
 
     const currentUrl = encodeURIComponent(window.location.href);
     const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
-
     let appOpened = false;
 
-    // Listen for visibility change to detect if user switched to Phantom app
     const handleVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
-        console.log("Phantom app opened successfully"); // Optional logging
         document.removeEventListener("visibilitychange", handleVisibilityChange);
+        inProgress = false;
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Direct redirect to Phantom deep link (works on all browsers)
-    window.location.href = deepLink;
+    // iOS/Safari reliable: hidden iframe + deep link
+    const iframe = document.createElement("iframe");
+    iframe.src = deepLink;
+    iframe.style.display = "none";
+    iframe.style.width = "1px";
+    iframe.style.height = "1px";
+    document.body.appendChild(iframe);
 
-    // Timeout fallback: If app didn't open within 2s, redirect to download
-    // This handles cases where Phantom is not installed or user cancels
+    // Remove iframe after 1s to avoid memory leaks
+    setTimeout(() => document.body.removeChild(iframe), 1000);
+
+    // Timeout fallback: 3s
     setTimeout(() => {
       if (!appOpened) {
-        console.log("Phantom not detected, redirecting to download"); // Optional logging
-        window.location.href = "https://phantom.app/download";
+        setDownloadModalOpen(true); // show modal instead of forced redirect
+        inProgress = false;
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-    }, 2000);
+    }, 3000);
   };
 
-  return { connectMobilePhantom };
+  return { connectMobilePhantom, downloadModalOpen };
 };
