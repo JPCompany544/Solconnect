@@ -1,6 +1,5 @@
 {
-  "build": {
-    "installCommand": "npm install --legacy-peer-deps",
-    "buildCommand": "npm run build"
-  }
+  "version": 2,
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "npm run build"
 }
