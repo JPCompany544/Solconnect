@@ -21,15 +21,14 @@ export default function Hero() {
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
   }, []);
 
-  // Navigate to dashboard once wallet is connected
+  // Navigate to dashboard once wallet is connected (desktop only; mobile uses redirect)
   useEffect(() => {
-    if (connected && publicKey) {
+    if (connected && publicKey && !isMobile) {
       localStorage.setItem("phantom_wallet", publicKey.toString());
       router.push("/dashboard");
     }
-  }, [connected, publicKey, router]);
+  }, [connected, publicKey, router, isMobile]);
 
-  // hCaptcha handlers
   const handleVerify = (token: string) => setToken(token);
   const handleExpire = () => setToken(null);
   const handleError = (err: string) => {
@@ -37,7 +36,6 @@ export default function Hero() {
     setToken(null);
   };
 
-  // Handle Connect button
   const handleConnect = async () => {
     if (!token) {
       alert("Please complete the captcha to connect your wallet.");
@@ -45,10 +43,10 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: open Phantom via deep link; user approves in-app
+      // Mobile: Open Phantom app via deep link; approval redirects to /dashboard
       connectMobilePhantom();
     } else {
-      // Desktop: select Phantom and connect
+      // Desktop: Select Phantom and connect via adapter
       const phantomWallet = wallets.find(wallet => wallet.adapter.name === "Phantom");
       if (!phantomWallet) {
         alert("Please install Phantom wallet to continue.");
