@@ -1,20 +1,19 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { Check } from 'lucide-react'
-import { useWallet } from '@solana/wallet-adapter-react'
-import { useRouter } from 'next/navigation'
-import HCaptcha from '@hcaptcha/react-hcaptcha'
-import { useMobileConnect } from './WalletProvider'
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useRouter } from "next/navigation";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { useMobileConnect } from "./WalletProvider";
 
 export default function Hero() {
-  const [token, setToken] = useState<string | null>(null)
-  const { connected, connect, publicKey } = useWallet()
-  const router = useRouter()
-  const { connectMobilePhantom } = useMobileConnect()
+  const [token, setToken] = useState<string | null>(null);
+  const { wallet, connected, connect, publicKey } = useWallet();
+  const router = useRouter();
+  const { connectMobilePhantom } = useMobileConnect();
 
-  // Detect mobile devices
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent.toLowerCase();
@@ -23,46 +22,46 @@ export default function Hero() {
 
   useEffect(() => {
     if (connected && publicKey) {
-      // Store wallet address in localStorage for persistence
-      localStorage.setItem('phantom_wallet', publicKey.toString())
-      router.push('/dashboard')
+      localStorage.setItem("phantom_wallet", publicKey.toString());
+      router.push("/dashboard");
     }
-  }, [connected, publicKey, router])
+  }, [connected, publicKey, router]);
 
-  const handleVerify = (token: string) => {
-    setToken(token)
-  }
-
-  const handleExpire = () => {
-    setToken(null)
-  }
-
+  const handleVerify = (token: string) => setToken(token);
+  const handleExpire = () => setToken(null);
   const handleError = (err: string) => {
-    console.log('hCaptcha error:', err)
-    setToken(null)
-  }
+    console.log("hCaptcha error:", err);
+    setToken(null);
+  };
 
-  const handleConnect = () => {
+  const handleConnect = async () => {
     if (!token) {
-      alert('Please complete the captcha to connect your wallet.')
-      return
+      alert("Please complete the captcha to connect your wallet.");
+      return;
     }
 
     if (isMobile) {
-      // Use mobile deep link
-      connectMobilePhantom()
+      // Mobile deep link
+      connectMobilePhantom();
     } else {
-      // Use desktop adapter
-      connect()
+      // Desktop wallet
+      if (!wallet) {
+        alert("No wallet selected. Please choose Phantom or Solflare.");
+        return;
+      }
+      try {
+        await connect();
+      } catch (err) {
+        console.error(err);
+        alert("Wallet connection failed.");
+      }
     }
-  }
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20">
-      {/* Background overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20" />
 
-      {/* Blurred NFT previews */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg blur-xl" />
         <div className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg blur-xl" />
@@ -92,13 +91,13 @@ export default function Hero() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)' }}
+          whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(139, 92, 246, 0.5)" }}
           whileTap={{ scale: 0.98 }}
-          className={`flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation`}
+          className="flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation"
           onClick={handleConnect}
         >
           <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
-          {connected ? 'Connected' : 'Connect Phantom'}
+          {connected ? "Connected" : "Connect Phantom"}
         </motion.button>
 
         <motion.div
@@ -107,7 +106,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="flex flex-row items-center justify-center gap-4 mb-8"
         >
-          {['Secure', 'Fast', 'Reliable'].map((item, index) => (
+          {["Secure", "Fast", "Reliable"].map((item) => (
             <div key={item} className="flex items-center space-x-2">
               <Check className="w-5 h-5 text-green-400" />
               <span className="text-white/90 font-medium">{item}</span>
@@ -123,7 +122,7 @@ export default function Hero() {
         >
           <div className="w-full max-w-xs grid place-items-center min-h-[78px] mt-4 md:mt-0">
             <HCaptcha
-              sitekey="10000000-ffff-ffff-ffff-000000000001" // Test sitekey
+              sitekey="10000000-ffff-ffff-ffff-000000000001"
               onVerify={handleVerify}
               onExpire={handleExpire}
               onError={handleError}
@@ -134,5 +133,5 @@ export default function Hero() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }
