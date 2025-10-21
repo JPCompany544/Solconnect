@@ -7,6 +7,7 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { SolanaMobileWalletAdapter, createDefaultAuthorizationResultCache } from '@solana-mobile/wallet-adapter-mobile';
 
 interface Props {
   children: ReactNode;
@@ -21,18 +22,19 @@ const isMobileDevice = (): boolean => {
 
 // ----- Wallet Connection Provider -----
 const WalletConnectionProvider: FC<Props> = ({ children }) => {
-  const isMobile = useMemo(() => isMobileDevice(), []);
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const desktopWallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
+  const wallets = useMemo(() => [
+    new PhantomWalletAdapter(),
+    new SolanaMobileWalletAdapter({
+      appIdentity: { name: 'SolConnect' },
+      authorizationResultCache: createDefaultAuthorizationResultCache(),
+    })
+  ], [network]);
 
-  // Mobile: only need ConnectionProvider, wallet connects via deep link
-  if (isMobile) return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
-
-  // Desktop: WalletProvider with Phantom autoConnect
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={desktopWallets} autoConnect>
+      <WalletProvider wallets={wallets} autoConnect>
         {children}
       </WalletProvider>
     </ConnectionProvider>
