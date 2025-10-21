@@ -5,6 +5,11 @@ import { WalletConnectionProvider } from '@/components/WalletProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// Initialize mobile wallet adapter polyfill
+if (typeof window !== 'undefined') {
+  import('@solana-mobile/wallet-adapter-mobile-polyfill').then(({ initialize }) => initialize());
+}
+
 export const metadata: Metadata = {
   title: 'Phantom - Your trusted crypto companion',
   description: 'Empowering the future of digital finance through blockchain solutions',

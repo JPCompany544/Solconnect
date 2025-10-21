@@ -18,9 +18,9 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
     () => [
       new SolanaMobileWalletAdapter({
         addressSelector: createDefaultAddressSelector(),
-        appIdentity: { name: 'SolConnect' },
+        appIdentity: { name: 'SolConnect App' },
         authorizationResultCache: createDefaultAuthorizationResultCache(),
-        cluster: 'mainnet-beta',
+        chain: 'mainnet-beta',
         onWalletNotFound: createDefaultWalletNotFoundHandler(),
       }),
       new PhantomWalletAdapter(),

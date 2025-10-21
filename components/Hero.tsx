@@ -59,7 +59,7 @@ export default function Hero() {
 
       if (!provider) {
         console.warn("Phantom not detected, falling back to Mobile Wallet Adapter...");
-        setPhantomAvailable(false)
+        console.log("Detected mobile wallet adapter active");
         // Fall back to MWA
         if (!connected) {
           await connect();
