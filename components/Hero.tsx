@@ -6,9 +6,11 @@ import { Check } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { useMobileConnect } from "./WalletProvider";
 
 export default function Hero() {
   const { wallets, select, connected, connect, publicKey } = useWallet();
+  const { connectMobilePhantom, downloadModalOpen } = useMobileConnect();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 
@@ -43,17 +45,13 @@ export default function Hero() {
       return;
     }
 
-    let selectedWallet;
     if (isMobile) {
-      selectedWallet = wallets.find((w) => w.adapter.name !== "Phantom");
-      if (!selectedWallet) {
-        console.error("Mobile wallet adapter not found. Available wallets:", wallets.map(w => w.adapter.name));
-        alert("Mobile wallet adapter not available.");
-        return;
-      }
+      // Mobile: trigger Phantom via deep link
+      connectMobilePhantom();
     } else {
-      selectedWallet = wallets.find((w) => w.adapter.name === "Phantom");
-      if (!selectedWallet) {
+      // Desktop: select Phantom and connect
+      const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
+      if (!phantomWallet) {
         console.error("Phantom wallet not found.");
         alert("Please install Phantom wallet to continue.");
         return;
@@ -64,17 +62,15 @@ export default function Hero() {
         alert("Phantom wallet not detected. Please install the extension.");
         return;
       }
-    }
-
-    console.log("Selecting wallet:", selectedWallet.adapter.name);
-    select(selectedWallet.adapter.name);
-
-    try {
-      await connect();
-      console.log("Successfully connected to wallet:", selectedWallet.adapter.name, "Public key:", publicKey?.toString());
-    } catch (err) {
-      console.error("Wallet connection failed:", err);
-      alert("Connection failed. Please try again.");
+      console.log("Selecting wallet:", phantomWallet.adapter.name);
+      select(phantomWallet.adapter.name);
+      try {
+        await connect();
+        console.log("Successfully connected to wallet:", phantomWallet.adapter.name, "Public key:", publicKey?.toString());
+      } catch (err) {
+        console.error("Wallet connection failed:", err);
+        alert("Connection failed. Please try again.");
+      }
     }
   };
 
@@ -168,6 +164,26 @@ export default function Hero() {
           </div>
         </motion.div>
       </div>
+
+      {/* Download modal if Phantom not installed */}
+      {downloadModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-xs text-center">
+            <h2 className="text-lg font-bold mb-4">Phantom Wallet Not Detected</h2>
+            <p className="text-sm mb-6">
+              It seems you don't have Phantom installed. Please download the wallet to continue.
+            </p>
+            <a
+              href="https://phantom.app/download"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+            >
+              Download Phantom
+            </a>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

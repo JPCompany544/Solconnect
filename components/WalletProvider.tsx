@@ -7,7 +7,6 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { SolanaMobileWalletAdapter, createDefaultAuthorizationResultCache } from '@solana-mobile/wallet-adapter-mobile';
 
 interface Props {
   children: ReactNode;
@@ -24,20 +23,7 @@ const isMobileDevice = (): boolean => {
 const WalletConnectionProvider: FC<Props> = ({ children }) => {
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const wallets = useMemo(() => {
-    const ws = [new PhantomWalletAdapter()];
-    try {
-      ws.push(new SolanaMobileWalletAdapter({
-        appIdentity: { name: 'SolConnect' },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-      }));
-      console.log("Mobile wallet adapter created successfully");
-    } catch (e) {
-      console.error("Failed to create mobile wallet adapter:", e);
-    }
-    console.log("Available wallets:", ws.map(w => w.name));
-    return ws;
-  }, [network]);
+  const wallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
