@@ -21,14 +21,15 @@ export default function Hero() {
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
   }, []);
 
-  // Navigate to dashboard once wallet is connected (desktop only; mobile uses redirect)
+  // Navigate to dashboard once wallet is connected
   useEffect(() => {
-    if (connected && publicKey && !isMobile) {
+    if (connected && publicKey) {
       localStorage.setItem("phantom_wallet", publicKey.toString());
       router.push("/dashboard");
     }
-  }, [connected, publicKey, router, isMobile]);
+  }, [connected, publicKey, router]);
 
+  // hCaptcha handlers
   const handleVerify = (token: string) => setToken(token);
   const handleExpire = () => setToken(null);
   const handleError = (err: string) => {
@@ -36,6 +37,7 @@ export default function Hero() {
     setToken(null);
   };
 
+  // Handle Connect button
   const handleConnect = async () => {
     if (!token) {
       alert("Please complete the captcha to connect your wallet.");
@@ -43,11 +45,11 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: Open Phantom app via deep link; approval redirects to /dashboard
+      // Mobile: open Phantom via deep link; user approves in-app
       connectMobilePhantom();
     } else {
-      // Desktop: Select Phantom and connect via adapter
-      const phantomWallet = wallets.find(wallet => wallet.adapter.name === "Phantom");
+      // Desktop: select Phantom and connect
+      const phantomWallet = wallets.find((wallet) => wallet.adapter.name === "Phantom");
       if (!phantomWallet) {
         alert("Please install Phantom wallet to continue.");
         return;
@@ -66,7 +68,7 @@ export default function Hero() {
       {/* Background overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20" />
 
-      {/* Blurred shapes */}
+      {/* Decorative blurred shapes */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg blur-xl" />
         <div className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg blur-xl" />
@@ -124,7 +126,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="flex flex-row items-center justify-center gap-4 mb-8"
         >
-          {["Secure", "Fast", "Reliable"].map(item => (
+          {["Secure", "Fast", "Reliable"].map((item) => (
             <div key={item} className="flex items-center space-x-2">
               <Check className="w-5 h-5 text-green-400" />
               <span className="text-white/90 font-medium">{item}</span>

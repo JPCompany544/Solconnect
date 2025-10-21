@@ -38,34 +38,24 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
   );
 };
 
-// Mobile Phantom connection hook with proper deep link parameters
+// Mobile Phantom connection hook
 export const useMobileConnect = (): {
   connectMobilePhantom: () => void;
   downloadModalOpen: boolean;
 } => {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  const inProgress = useRef(false); // Prevent multiple simultaneous connection attempts
+  const inProgress = useRef(false); // persist across renders
 
   const connectMobilePhantom = () => {
     if (typeof window === "undefined" || inProgress.current) return;
     inProgress.current = true;
 
-    // Current page URL for app_url parameter
     const currentUrl = encodeURIComponent(window.location.href);
-
-    // Redirect URI: after approval in Phantom, redirect back to dashboard
-    const dashboardUrl = `${window.location.origin}/dashboard`;
-    const redirectUri = encodeURIComponent(dashboardUrl);
-
-    // Cluster: default to mainnet for production
-    const cluster = "mainnet";
-
-    // Phantom deep link with required parameters for connection and redirect
-    const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}&redirect_uri=${redirectUri}&cluster=${cluster}`;
+    const deepLink = `phantom://connect?app_url=${currentUrl}`;
 
     let appOpened = false;
 
-    // Detect if user switched to Phantom app (visibilitychange event)
+    // Detect if user switches to Phantom app (best effort)
     const handleVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
@@ -75,7 +65,7 @@ export const useMobileConnect = (): {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // iOS Safari: Use hidden iframe to trigger app open (more reliable on iOS)
+    // iOS Safari: attempt via hidden iframe
     const iframe = document.createElement("iframe");
     iframe.src = deepLink;
     iframe.style.display = "none";
@@ -83,17 +73,17 @@ export const useMobileConnect = (): {
     iframe.style.height = "1px";
     document.body.appendChild(iframe);
 
-    // Clean up iframe after short delay
+    // Remove iframe after 1s
     setTimeout(() => {
       if (iframe.parentNode) document.body.removeChild(iframe);
     }, 1000);
 
-    // Android / fallback: Direct redirect as backup
+    // Android / fallback: direct redirect
     setTimeout(() => {
       window.location.href = deepLink;
     }, 50);
 
-    // Timeout fallback: If Phantom app didn't open within 3s, show download modal
+    // Timeout fallback: show download modal if app not opened in 3s
     setTimeout(() => {
       if (!appOpened) setDownloadModalOpen(true);
       inProgress.current = false;
@@ -101,7 +91,7 @@ export const useMobileConnect = (): {
     }, 3000);
   };
 
-  // Close modal if user installs Phantom later
+  // Optional: close download modal automatically if user installed Phantom
   useEffect(() => {
     if (downloadModalOpen && window.solana?.isPhantom) {
       setDownloadModalOpen(false);
