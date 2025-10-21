@@ -2,10 +2,10 @@
 
 // WalletProvider.tsx - Mobile + Desktop Phantom flow for Next.js
 
-import React, { FC, ReactNode, useMemo, useState, useRef } from "react";
+import React, { FC, ReactNode, useMemo, useState, useEffect } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { clusterApiUrl } from "@solana/web3.js";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { WalletAdapterNetwork, WalletAdapter } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
@@ -24,12 +24,16 @@ const isMobileDevice = (): boolean => {
 const WalletConnectionProvider: FC<Props> = ({ children }) => {
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const wallets = useMemo(() => [
-    new PhantomWalletAdapter(),
-    new SolanaMobileWalletAdapter({
-      appIdentity: { name: 'SolConnect' },
-    })
-  ], [network]);
+  const [wallets, setWallets] = useState<WalletAdapter[]>([]);
+
+  useEffect(() => {
+    setWallets([
+      new PhantomWalletAdapter(),
+      new SolanaMobileWalletAdapter({
+        appIdentity: { name: 'SolConnect' },
+      })
+    ]);
+  }, [network]);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
