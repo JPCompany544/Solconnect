@@ -47,9 +47,14 @@ export default function Hero() {
 
     let selectedWallet;
     if (isMobile) {
-      // Mobile: use deep link to connect
-      connectMobilePhantom();
-      return;
+      // Mobile: select SolanaMobileWalletAdapter (works in Phantom app browser)
+      selectedWallet = wallets.find((w) => w.adapter.name !== "Phantom");
+      if (!selectedWallet) {
+        const available = wallets.map(w => w.adapter.name).join(', ');
+        console.error("Mobile wallet adapter not found. Available wallets:", available);
+        alert(`Mobile wallet adapter not found. Available: ${available}. Please try again.`);
+        return;
+      }
     } else {
       // Desktop: select Phantom and connect
       selectedWallet = wallets.find((w) => w.adapter.name === "Phantom");
