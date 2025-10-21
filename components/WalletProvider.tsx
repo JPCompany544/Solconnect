@@ -7,7 +7,7 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { SolanaMobileWalletAdapter, createDefaultAuthorizationResultCache } from '@solana-mobile/wallet-adapter-mobile';
+import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
 interface Props {
   children: ReactNode;
@@ -28,7 +28,6 @@ const WalletConnectionProvider: FC<Props> = ({ children }) => {
     new PhantomWalletAdapter(),
     new SolanaMobileWalletAdapter({
       appIdentity: { name: 'SolConnect' },
-      authorizationResultCache: createDefaultAuthorizationResultCache(),
     })
   ], [network]);
 
@@ -44,16 +43,9 @@ const WalletConnectionProvider: FC<Props> = ({ children }) => {
 // ----- Mobile Connect Hook -----
 const useMobileConnect = (): { connectMobilePhantom: () => void; downloadModalOpen: boolean } => {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  const inProgress = useRef(false);
 
   const connectMobilePhantom = () => {
-    if (typeof window === "undefined") return;
-
-    // Open the dApp in Phantom's mobile browser where MWA can work
-    const currentUrl = encodeURIComponent(window.location.href);
-    const deepLink = `phantom://browse?url=${currentUrl}`;
-
-    window.location.href = deepLink;
+    // Mobile connection is now handled by SolanaMobileWalletAdapter
   };
 
   return { connectMobilePhantom, downloadModalOpen };

@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
 export default function Hero() {
   const { wallets, select, connected, connect, publicKey } = useWallet();
@@ -46,10 +47,11 @@ export default function Hero() {
     let selectedWallet;
     if (isMobile) {
       // Mobile: select SolanaMobileWalletAdapter (works in Phantom app browser)
-      selectedWallet = wallets.find((w) => w.adapter.name !== "Phantom");
+      selectedWallet = wallets.find((w) => w.adapter instanceof SolanaMobileWalletAdapter);
       if (!selectedWallet) {
-        console.error("Mobile wallet adapter not found. Available wallets:", wallets.map(w => w.adapter.name));
-        alert("Please open this dApp in the Phantom mobile app to connect.");
+        const available = wallets.map(w => w.adapter.name).join(', ');
+        console.error("Mobile wallet adapter not found. Available wallets:", available);
+        alert(`Mobile wallet adapter not found. Available: ${available}`);
         return;
       }
     } else {
