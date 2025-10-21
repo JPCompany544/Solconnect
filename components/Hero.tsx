@@ -6,7 +6,6 @@ import { Check } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
-import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
 export default function Hero() {
   const { wallets, select, connected, connect, publicKey } = useWallet();
@@ -46,9 +45,9 @@ export default function Hero() {
 
     let selectedWallet;
     if (isMobile) {
-      selectedWallet = wallets.find((w) => w.adapter instanceof SolanaMobileWalletAdapter);
+      selectedWallet = wallets.find((w) => w.adapter.name !== "Phantom");
       if (!selectedWallet) {
-        console.error("Mobile wallet adapter not found.");
+        console.error("Mobile wallet adapter not found. Available wallets:", wallets.map(w => w.adapter.name));
         alert("Mobile wallet adapter not available.");
         return;
       }
