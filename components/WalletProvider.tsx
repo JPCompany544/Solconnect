@@ -7,7 +7,6 @@ import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork, WalletAdapter } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
 interface Props {
   children: ReactNode;
@@ -27,15 +26,7 @@ const WalletConnectionProvider: FC<Props> = ({ children }) => {
   const [wallets, setWallets] = useState<WalletAdapter[]>([]);
 
   useEffect(() => {
-    const ws = [new PhantomWalletAdapter()];
-    try {
-      ws.push(new SolanaMobileWalletAdapter({
-        appIdentity: { name: 'SolConnect', uri: window.location.origin },
-      }));
-    } catch (e) {
-      console.error("Failed to create mobile wallet adapter:", e);
-    }
-    setWallets(ws);
+    setWallets([new PhantomWalletAdapter()]);
   }, [network]);
 
   return (
@@ -52,7 +43,16 @@ const useMobileConnect = (): { connectMobilePhantom: () => void; downloadModalOp
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
   const connectMobilePhantom = () => {
-    // Mobile connection is now handled by SolanaMobileWalletAdapter
+    if (typeof window === "undefined") return;
+
+    // Deep link to Phantom connect
+    const appUrl = encodeURIComponent(window.location.origin);
+    const redirectUri = encodeURIComponent(`${window.location.origin}/phantom-callback`);
+    const cluster = "mainnet-beta";
+
+    const deepLink = `phantom://connect?app_url=${appUrl}&redirect_uri=${redirectUri}&cluster=${cluster}`;
+
+    window.location.href = deepLink;
   };
 
   return { connectMobilePhantom, downloadModalOpen };

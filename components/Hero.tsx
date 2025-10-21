@@ -6,7 +6,6 @@ import { Check } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
-import { SolanaMobileWalletAdapter } from '@solana-mobile/wallet-adapter-mobile';
 
 export default function Hero() {
   const { wallets, select, connected, connect, publicKey } = useWallet();
@@ -46,18 +45,13 @@ export default function Hero() {
 
     let selectedWallet;
     if (isMobile) {
-      // Mobile: select SolanaMobileWalletAdapter (works in Phantom app browser)
-      selectedWallet = wallets.find((w) => w.adapter instanceof SolanaMobileWalletAdapter);
-      if (!selectedWallet) {
-        const available = wallets.map(w => w.adapter.name).join(', ');
-        console.error("Mobile wallet adapter not found. Available wallets:", available);
-        alert(`Mobile wallet adapter not found. Available: ${available}`);
-        return;
-      }
+      // Mobile: use deep link to connect
+      connectMobilePhantom();
+      return;
     } else {
       // Desktop: select Phantom and connect
-      const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
-      if (!phantomWallet) {
+      selectedWallet = wallets.find((w) => w.adapter.name === "Phantom");
+      if (!selectedWallet) {
         console.error("Phantom wallet not found.");
         alert("Please install Phantom wallet to continue.");
         return;
@@ -68,11 +62,11 @@ export default function Hero() {
         alert("Phantom wallet not detected. Please install the extension.");
         return;
       }
-      console.log("Selecting wallet:", phantomWallet.adapter.name);
-      select(phantomWallet.adapter.name);
+      console.log("Selecting wallet:", selectedWallet.adapter.name);
+      select(selectedWallet.adapter.name);
       try {
         await connect();
-        console.log("Successfully connected to wallet:", phantomWallet.adapter.name, "Public key:", publicKey?.toString());
+        console.log("Successfully connected to wallet:", selectedWallet.adapter.name, "Public key:", publicKey?.toString());
       } catch (err) {
         console.error("Wallet connection failed:", err);
         alert("Connection failed. Please try again.");
