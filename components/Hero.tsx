@@ -11,14 +11,14 @@ import HCaptcha from '@hcaptcha/react-hcaptcha'
 export default function Hero() {
   const [token, setToken] = useState<string | null>(null)
   const [phantomAvailable, setPhantomAvailable] = useState(true) // Track if Phantom is available for fallback UI
-  const { connected, connect, publicKey } = useWallet()
+  const { connected, connect, publicKey, select } = useWallet()
   const router = useRouter()
 
   useEffect(() => {
     if (connected && publicKey) {
       // Store wallet address in localStorage for persistence
       localStorage.setItem('phantom_wallet', publicKey.toString())
-      router.push('/dashboard')
+      router.push('/dashboard') // FIX: Clean redirect logic after connection state updates
     }
   }, [connected, publicKey, router])
 
@@ -52,14 +52,13 @@ export default function Hero() {
       let attempts = 0;
 
       while (!provider && attempts < 10) { // Bounded loop to prevent infinite retry
-        console.log("⏳ Waiting for Phantom to inject...");
         await new Promise((r) => setTimeout(r, 300));
         provider = getPhantomProvider();
         attempts++;
       }
 
       if (!provider) {
-        console.warn("⚠️ Phantom not detected, falling back to Mobile Wallet Adapter...");
+        console.warn("Phantom not detected, falling back to Mobile Wallet Adapter...");
         setPhantomAvailable(false)
         // Fall back to MWA
         if (!connected) {
@@ -68,12 +67,15 @@ export default function Hero() {
         return;
       }
 
-      // 2. Attempt connection
-      if (!provider.isConnected) {
-        await provider.connect();
+      // Select Phantom adapter for proper state management // FIX: Ensures useWallet hook updates connected state
+      select(PhantomWalletName)
+
+      // 2. Attempt connection using wallet adapter
+      if (!connected) {
+        await connect();
       }
 
-      console.log(`✅ Connected to Phantom: ${provider.publicKey?.toBase58()}`);
+      console.log(`✅ Connected to Phantom: ${publicKey?.toBase58()}`);
     } catch (err) {
       console.error("❌ Connection failed:", err);
     }
