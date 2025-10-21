@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { useWallet } from '@solana/wallet-adapter-react'
+import { PhantomWalletName } from '@solana/wallet-adapter-phantom'
 import { useRouter } from 'next/navigation'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 
 export default function Hero() {
   const [token, setToken] = useState<string | null>(null)
-  const { publicKey, connect, disconnect, connected } = useWallet()
+  const { publicKey, connect, disconnect, connected, wallet, select } = useWallet()
   const router = useRouter()
 
   useEffect(() => {
@@ -39,11 +40,27 @@ export default function Hero() {
       return
     }
 
+    if (typeof window === 'undefined') return; // prevent SSR mismatch
+
+    // Select Phantom wallet
+    select(PhantomWalletName)
+
+    // Wait a bit for selection
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    if (!wallet) {
+      console.error("No wallet selected. Please choose Phantom.");
+      alert('No wallet selected. Please ensure Phantom is installed.');
+      return;
+    }
+
     try {
+      console.log('Attempting to connect to wallet:', wallet.adapter.name)
       await connect()
+      console.log('Connected successfully to', wallet.adapter.name, 'with public key:', publicKey?.toString())
     } catch (error) {
       console.error('Connection failed:', error)
-      // Removed alert to prevent false messages on localhost
+      alert(`Connection failed: ${(error as Error).message || 'Unknown error'}`)
     }
   }
 
