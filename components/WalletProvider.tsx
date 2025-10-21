@@ -12,20 +12,21 @@ interface Props {
   children: ReactNode;
 }
 
+// ----- Utility: Detect mobile browser -----
+const isMobileDevice = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+};
+
 // ----- Wallet Connection Provider -----
 const WalletConnectionProvider: FC<Props> = ({ children }) => {
-  const isMobile = useMemo(() => {
-    if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent.toLowerCase();
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
-  }, []);
-
+  const isMobile = useMemo(() => isMobileDevice(), []);
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-
   const desktopWallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
 
-  // Mobile users: only need ConnectionProvider, wallet connects via deep link
+  // Mobile: only need ConnectionProvider, wallet connects via deep link
   if (isMobile) return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
 
   // Desktop: WalletProvider with Phantom autoConnect
@@ -39,10 +40,7 @@ const WalletConnectionProvider: FC<Props> = ({ children }) => {
 };
 
 // ----- Mobile Connect Hook -----
-const useMobileConnect = (): {
-  connectMobilePhantom: () => void;
-  downloadModalOpen: boolean;
-} => {
+const useMobileConnect = (): { connectMobilePhantom: () => void; downloadModalOpen: boolean } => {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const inProgress = useRef(false);
 
@@ -50,16 +48,16 @@ const useMobileConnect = (): {
     if (typeof window === "undefined" || inProgress.current) return;
     inProgress.current = true;
 
-    const currentUrl = encodeURIComponent(window.location.origin);
+    const appUrl = encodeURIComponent(window.location.origin);
     const redirectUri = encodeURIComponent(`${window.location.origin}/phantom-callback`);
     const cluster = "mainnet";
 
-    // Phantom deep link for mobile web
-   const deepLink = `phantom://connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_uri=${redirectUri}&cluster=mainnet`;
-
+    // Deep link to Phantom
+    const deepLink = `phantom://connect?app_url=${appUrl}&redirect_uri=${redirectUri}&cluster=${cluster}`;
 
     let appOpened = false;
 
+    // Detect if user switches to Phantom (visibilitychange)
     const handleVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
@@ -69,33 +67,31 @@ const useMobileConnect = (): {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // iOS hidden iframe attempt
+    // iOS: attempt hidden iframe
     const iframe = document.createElement("iframe");
     iframe.src = deepLink;
     iframe.style.display = "none";
-    iframe.style.width = "1px";
-    iframe.style.height = "1px";
     document.body.appendChild(iframe);
 
     setTimeout(() => {
       if (iframe.parentNode) document.body.removeChild(iframe);
-    }, 1000);
+    }, 500);
 
-    // Android / fallback redirect
+    // Android / fallback: redirect
     setTimeout(() => {
       window.location.href = deepLink;
     }, 50);
 
-    // If Phantom not installed or not opened, mark for download
+    // If Phantom not installed / not opened, show download modal
     setTimeout(() => {
       if (!appOpened) setDownloadModalOpen(true);
       inProgress.current = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-    }, 3000);
+    }, 2500);
   };
 
   return { connectMobilePhantom, downloadModalOpen };
 };
 
-// ----- EXPLICIT EXPORTS -----
+// ----- Exports -----
 export { WalletConnectionProvider, useMobileConnect };

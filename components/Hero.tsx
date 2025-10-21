@@ -14,16 +14,14 @@ export default function Hero() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 
-  // Detect mobile
+  // Detect mobile device
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent.toLowerCase();
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
-      ua
-    );
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
   }, []);
 
-  // Navigate to dashboard when wallet connects
+  // Redirect to dashboard when wallet connects
   useEffect(() => {
     if (connected && publicKey) {
       localStorage.setItem("phantom_wallet", publicKey.toString());
@@ -35,11 +33,11 @@ export default function Hero() {
   const handleVerify = (token: string) => setToken(token);
   const handleExpire = () => setToken(null);
   const handleError = (err: string) => {
-    console.log("hCaptcha error:", err);
+    console.error("hCaptcha error:", err);
     setToken(null);
   };
 
-  // Connect button
+  // Connect wallet handler
   const handleConnect = async () => {
     if (!token) {
       alert("Please complete the captcha to connect your wallet.");
@@ -47,13 +45,11 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: prompt Phantom app approval via deep link
+      // Mobile: trigger Phantom via deep link hook
       connectMobilePhantom();
     } else {
       // Desktop: select Phantom and connect
-      const phantomWallet = wallets.find(
-        (wallet) => wallet.adapter.name === "Phantom"
-      );
+      const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
       if (!phantomWallet) {
         alert("Please install Phantom wallet to continue.");
         return;
@@ -105,7 +101,7 @@ export default function Hero() {
           loan companion
         </motion.h1>
 
-        {/* Connect Button */}
+        {/* Connect button */}
         <motion.button
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
