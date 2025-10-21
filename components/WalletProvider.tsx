@@ -2,7 +2,7 @@
 
 // WalletProvider.tsx - Production-ready Phantom wallet integration for Next.js
 
-import React, { FC, ReactNode, useMemo, useState } from "react";
+import React, { FC, ReactNode, useMemo, useState, useRef } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
@@ -13,7 +13,6 @@ interface Props {
 }
 
 export const WalletConnectionProvider: FC<Props> = ({ children }) => {
-  // Detect mobile devices (iOS/Android)
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent.toLowerCase();
@@ -22,16 +21,12 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
 
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-
-  // Only Phantom wallet
   const wallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
 
   if (isMobile) {
-    // Mobile: just provide connection context
     return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
   }
 
-  // Desktop: WalletProvider with autoConnect
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
@@ -47,27 +42,27 @@ export const useMobileConnect = (): {
   downloadModalOpen: boolean;
 } => {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  let inProgress = false; // prevent multiple clicks
+  const inProgress = useRef(false); // persists across renders
 
   const connectMobilePhantom = () => {
-    if (typeof window === "undefined" || inProgress) return;
-    inProgress = true;
+    if (typeof window === "undefined" || inProgress.current) return;
+    inProgress.current = true;
 
     const currentUrl = encodeURIComponent(window.location.href);
     const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
     let appOpened = false;
 
-    // Listen for visibility change to detect if user switched to Phantom app
+    // iOS/Android visibility detection (best effort)
     const handleVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
+        inProgress.current = false;
         document.removeEventListener("visibilitychange", handleVisibilityChange);
-        inProgress = false;
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // iOS/Safari trick: hidden iframe
+    // Attempt iframe first (iOS Safari)
     const iframe = document.createElement("iframe");
     iframe.src = deepLink;
     iframe.style.display = "none";
@@ -75,17 +70,19 @@ export const useMobileConnect = (): {
     iframe.style.height = "1px";
     document.body.appendChild(iframe);
 
-    // Cleanup iframe after 1s
     setTimeout(() => {
       if (iframe.parentNode) document.body.removeChild(iframe);
     }, 1000);
 
-    // Timeout fallback: 3s
+    // Then direct redirect (Android Chrome / fallback)
     setTimeout(() => {
-      if (!appOpened) {
-        setDownloadModalOpen(true); // show download modal
-        inProgress = false;
-      }
+      window.location.href = deepLink;
+    }, 50);
+
+    // Timeout fallback: show download modal after 3s if app not opened
+    setTimeout(() => {
+      if (!appOpened) setDownloadModalOpen(true);
+      inProgress.current = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, 3000);
   };

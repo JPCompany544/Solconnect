@@ -14,12 +14,14 @@ export default function Hero() {
   const router = useRouter();
   const { connectMobilePhantom, downloadModalOpen } = useMobileConnect();
 
+  // Determine if the user is on mobile
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent.toLowerCase();
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
   }, []);
 
+  // Navigate to dashboard if wallet connected
   useEffect(() => {
     if (connected && publicKey) {
       localStorage.setItem("phantom_wallet", publicKey.toString());
@@ -41,11 +43,11 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: open Phantom via deep link
+      // Mobile: attempt to open Phantom via deep link
       connectMobilePhantom();
     } else {
       // Desktop: auto-select Phantom and connect
-      const phantomWallet = wallets.find((wallet) => wallet.adapter.name === "Phantom");
+      const phantomWallet = wallets.find(wallet => wallet.adapter.name === "Phantom");
       if (!phantomWallet) {
         alert("Please install Phantom wallet to continue.");
         return;
@@ -64,7 +66,7 @@ export default function Hero() {
       {/* Background overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20" />
 
-      {/* Blurred shapes */}
+      {/* Blurred decorative shapes */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg blur-xl" />
         <div className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg blur-xl" />
@@ -119,7 +121,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="flex flex-row items-center justify-center gap-4 mb-8"
         >
-          {["Secure", "Fast", "Reliable"].map((item) => (
+          {["Secure", "Fast", "Reliable"].map(item => (
             <div key={item} className="flex items-center space-x-2">
               <Check className="w-5 h-5 text-green-400" />
               <span className="text-white/90 font-medium">{item}</span>
@@ -146,7 +148,7 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      {/* Mobile Download Modal */}
+      {/* Download Modal if Phantom fails to open */}
       {downloadModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-xs text-center">
