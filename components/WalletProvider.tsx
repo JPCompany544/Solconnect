@@ -2,7 +2,7 @@
 
 // WalletProvider.tsx - Mobile + Desktop Phantom flow for Next.js
 
-import React, { FC, ReactNode, useMemo, useState, useRef, useEffect } from "react";
+import React, { FC, ReactNode, useMemo, useState, useRef } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
@@ -22,13 +22,16 @@ const WalletConnectionProvider: FC<Props> = ({ children }) => {
 
   const network = WalletAdapterNetwork.Mainnet;
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
-  const wallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
 
+  const desktopWallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
+
+  // Mobile users: only need ConnectionProvider, wallet connects via deep link
   if (isMobile) return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
 
+  // Desktop: WalletProvider with Phantom autoConnect
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+      <WalletProvider wallets={desktopWallets} autoConnect>
         {children}
       </WalletProvider>
     </ConnectionProvider>
@@ -51,6 +54,7 @@ const useMobileConnect = (): {
     const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
     const cluster = "mainnet";
 
+    // Phantom deep link for mobile web
     const deepLink = `phantom://connect?app_url=${currentUrl}&redirect_uri=${redirectUri}&cluster=${cluster}`;
 
     let appOpened = false;
@@ -64,7 +68,7 @@ const useMobileConnect = (): {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // iOS iframe attempt
+    // iOS hidden iframe attempt
     const iframe = document.createElement("iframe");
     iframe.src = deepLink;
     iframe.style.display = "none";
@@ -81,19 +85,13 @@ const useMobileConnect = (): {
       window.location.href = deepLink;
     }, 50);
 
-    // Fallback: show download modal if Phantom not opened
+    // If Phantom not installed or not opened, mark for download
     setTimeout(() => {
       if (!appOpened) setDownloadModalOpen(true);
       inProgress.current = false;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, 3000);
   };
-
-  useEffect(() => {
-    if (downloadModalOpen && window.solana?.isPhantom) {
-      setDownloadModalOpen(false);
-    }
-  }, [downloadModalOpen]);
 
   return { connectMobilePhantom, downloadModalOpen };
 };

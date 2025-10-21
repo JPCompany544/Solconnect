@@ -9,19 +9,21 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { useMobileConnect } from "./WalletProvider";
 
 export default function Hero() {
-  const [token, setToken] = useState<string | null>(null);
   const { wallets, select, connected, connect, publicKey } = useWallet();
-  const router = useRouter();
   const { connectMobilePhantom, downloadModalOpen } = useMobileConnect();
+  const router = useRouter();
+  const [token, setToken] = useState<string | null>(null);
 
-  // Mobile detection
+  // Detect mobile
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const ua = navigator.userAgent.toLowerCase();
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+      ua
+    );
   }, []);
 
-  // Navigate to dashboard once wallet is connected
+  // Navigate to dashboard when wallet connects
   useEffect(() => {
     if (connected && publicKey) {
       localStorage.setItem("phantom_wallet", publicKey.toString());
@@ -37,7 +39,7 @@ export default function Hero() {
     setToken(null);
   };
 
-  // Handle Connect button
+  // Connect button
   const handleConnect = async () => {
     if (!token) {
       alert("Please complete the captcha to connect your wallet.");
@@ -45,11 +47,13 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: open Phantom via deep link; user approves in-app
+      // Mobile: prompt Phantom app approval via deep link
       connectMobilePhantom();
     } else {
       // Desktop: select Phantom and connect
-      const phantomWallet = wallets.find((wallet) => wallet.adapter.name === "Phantom");
+      const phantomWallet = wallets.find(
+        (wallet) => wallet.adapter.name === "Phantom"
+      );
       if (!phantomWallet) {
         alert("Please install Phantom wallet to continue.");
         return;
@@ -154,7 +158,7 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      {/* Download modal if Phantom fails to open */}
+      {/* Download modal if Phantom not installed */}
       {downloadModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-xs text-center">
