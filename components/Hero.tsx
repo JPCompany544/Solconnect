@@ -1,24 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { useWallet } from '@solana/wallet-adapter-react'
-import { PhantomWalletName } from '@solana/wallet-adapter-phantom'
 import { useRouter } from 'next/navigation'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
+import { useMobileConnect } from './WalletProvider'
 
 export default function Hero() {
   const [token, setToken] = useState<string | null>(null)
-  const [phantomAvailable, setPhantomAvailable] = useState(true) // Track if Phantom is available for fallback UI
-  const { connected, connect, publicKey, select } = useWallet()
+  const { connected, connect, publicKey } = useWallet()
   const router = useRouter()
+  const { connectMobilePhantom } = useMobileConnect()
+
+  // Detect mobile devices
+  const isMobile = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent.toLowerCase();
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+  }, []);
 
   useEffect(() => {
     if (connected && publicKey) {
       // Store wallet address in localStorage for persistence
       localStorage.setItem('phantom_wallet', publicKey.toString())
-      router.push('/dashboard') // FIX: Clean redirect logic after connection state updates
+      router.push('/dashboard')
     }
   }, [connected, publicKey, router])
 
@@ -35,49 +42,18 @@ export default function Hero() {
     setToken(null)
   }
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
     if (!token) {
       alert('Please complete the captcha to connect your wallet.')
       return
     }
 
-    try {
-      if (typeof window === "undefined") return;
-
-      // 1. Detect Phantom injection (desktop or in-app mobile) - Async check to avoid hydration issues
-      const getPhantomProvider = () =>
-        (window as any).solana && (window as any).solana.isPhantom ? (window as any).solana : null;
-
-      let provider = getPhantomProvider();
-      let attempts = 0;
-
-      while (!provider && attempts < 10) { // Bounded loop to prevent infinite retry
-        await new Promise((r) => setTimeout(r, 300));
-        provider = getPhantomProvider();
-        attempts++;
-      }
-
-      if (!provider) {
-        console.warn("Phantom not detected, falling back to Mobile Wallet Adapter...");
-        console.log("Detected mobile wallet adapter active");
-        // Fall back to MWA
-        if (!connected) {
-          await connect();
-        }
-        return;
-      }
-
-      // Select Phantom adapter for proper state management // FIX: Ensures useWallet hook updates connected state
-      select(PhantomWalletName)
-
-      // 2. Attempt connection using wallet adapter
-      if (!connected) {
-        await connect();
-      }
-
-      console.log(`✅ Connected to Phantom: ${publicKey?.toBase58()}`);
-    } catch (err) {
-      console.error("❌ Connection failed:", err);
+    if (isMobile) {
+      // Use mobile deep link
+      connectMobilePhantom()
+    } else {
+      // Use desktop adapter
+      connect()
     }
   }
 
@@ -112,35 +88,18 @@ export default function Hero() {
           Your trusted <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="inline w-8 h-8 rounded-full align-baseline" /> loan companion
         </motion.h1>
 
-        {phantomAvailable ? ( // Conditional UI: show connect button if Phantom available, else install link
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)' }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation`}
-            onClick={handleConnect}
-          >
-            <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
-            {connected ? 'Connected' : 'Connect Phantom'}
-          </motion.button>
-        ) : (
-          <motion.a
-            href="https://phantom.app/"
-            target="_blank"
-            rel="noopener noreferrer"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-            className="flex items-center mx-auto bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation"
-          >
-            <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
-            Install Phantom Wallet
-          </motion.a>
-        )}
+        <motion.button
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)' }}
+          whileTap={{ scale: 0.98 }}
+          className={`flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation`}
+          onClick={handleConnect}
+        >
+          <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
+          {connected ? 'Connected' : 'Connect Phantom'}
+        </motion.button>
 
         <motion.div
           initial={{ opacity: 0 }}
