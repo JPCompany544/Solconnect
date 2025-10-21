@@ -1,111 +1,82 @@
 "use client";
 
-// WalletProvider.tsx - Integrated desktop and mobile Phantom wallet support
-// Desktop: Uses wallet adapters for extension-based connection
-// Mobile: Uses Mobile Wallet Adapter Protocol for app-based connection
+// WalletProvider.tsx - Solana wallet integration for desktop and mobile web
+// Desktop: Uses wallet adapters for browser extensions
+// Mobile: Uses deep links to open Phantom mobile app
 
-import React, { FC, ReactNode, useMemo, useState, useEffect } from "react";
+import React, { FC, ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
-import {
-  transact,
-  Web3MobileWallet,
-  APP_IDENTITY
-} from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
 
 interface Props {
   children: ReactNode;
 }
 
 export const WalletConnectionProvider: FC<Props> = ({ children }) => {
-  const [mobileWallet, setMobileWallet] = useState<Web3MobileWallet | null>(null);
-
-  // Detect mobile browsers (iOS/Android)
+  // Detect mobile devices (iOS/Android) via user agent
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     const userAgent = navigator.userAgent.toLowerCase();
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
   }, []);
 
-  // Define app identity for mobile wallet
-  const appIdentity: APP_IDENTITY = {
-    name: 'SolConnect App',
-    uri: 'https://solconnect.app',
-    icon: 'https://solconnect.app/images/main-logo.png'
-  };
-
-  // Mobile wallet connection function
-  const connectMobileWallet = async () => {
+  // Mobile connect function: Opens Phantom app via deep link
+  // If Phantom is installed, opens the app; otherwise, shows download prompt
+  const connectMobilePhantom = () => {
     if (!isMobile) return;
 
-    try {
-      // Use transact to authorize with Phantom mobile app
-      await transact(async (wallet) => {
-        // Request authorization
-        const authorizationResult = await wallet.authorize({
-          cluster: "mainnet-beta",
-          identity: appIdentity,
-        });
+    const currentUrl = encodeURIComponent(window.location.href);
+    const phantomDeepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
 
-        // Log the first account address
-        console.log("Mobile wallet authorized:", authorizationResult.accounts[0].address);
-
-        // Store the wallet instance for future signing
-        setMobileWallet(wallet);
-
-        return authorizationResult;
-      });
-    } catch (error) {
-      console.warn("Mobile wallet not installed or connection failed:", error);
-      // Optionally, show fallback UI here
-    }
+    // Open the deep link
+    window.location.href = phantomDeepLink;
   };
 
-  // Auto-connect mobile wallet on mount if mobile
-  useEffect(() => {
-    if (isMobile) {
-      connectMobileWallet();
-    }
-  }, [isMobile]);
+  // Network configuration - easily switchable (Mainnet for production, Devnet for testing)
+  const network = WalletAdapterNetwork.Mainnet; // Change to Devnet for testing
 
-  // Set network to Mainnet
-  const network = WalletAdapterNetwork.Mainnet;
-
-  // Create Solana RPC endpoint
+  // Memoize Solana RPC endpoint to prevent unnecessary re-computation
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
-  // Desktop wallet adapters (only for non-mobile)
-  const wallets = useMemo(() => {
-    if (isMobile) return []; // No adapters for mobile, use protocol instead
-
-    return [
-      // Desktop Phantom Wallet Adapter
+  // Memoize wallet adapters
+  // For mobile, we still include adapters in case the user has extensions,
+  // but primary mobile flow uses deep links
+  const wallets = useMemo(
+    () => [
+      // Phantom Wallet Adapter - supports desktop browser extension
+      // Automatically detects and connects to Phantom extension
       new PhantomWalletAdapter(),
-      // Additional desktop wallet support
+
+      // Solflare Wallet Adapter - additional desktop wallet support
+      // Provides alternative wallet option for desktop users
       new SolflareWalletAdapter(),
-    ];
-  }, [isMobile, network]);
+    ],
+    [network] // Dependencies for memoization
+  );
 
-  // For mobile, render without WalletProvider, handle via protocol
-  if (isMobile) {
-    return (
-      <ConnectionProvider endpoint={endpoint}>
-        {children}
-      </ConnectionProvider>
-    );
-  }
-
-  // Desktop: Use standard wallet adapters
   return (
+    // ConnectionProvider establishes Solana RPC connection
     <ConnectionProvider endpoint={endpoint}>
+      {/* WalletProvider manages wallet state and adapters */}
       <WalletProvider
         wallets={wallets}
-        autoConnect
+        autoConnect // Automatically reconnect previously authorized wallets
       >
         {children}
       </WalletProvider>
     </ConnectionProvider>
   );
+};
+
+// Export mobile connect function for use in components (e.g., connect button)
+export const useMobileConnect = () => {
+  const connectMobilePhantom = () => {
+    const currentUrl = encodeURIComponent(window.location.href);
+    const phantomDeepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
+    window.location.href = phantomDeepLink;
+  };
+
+  return { connectMobilePhantom };
 };
