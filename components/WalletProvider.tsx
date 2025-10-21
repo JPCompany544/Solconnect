@@ -43,7 +43,7 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
   );
 };
 
-// Mobile Phantom connection hook with iframe deep link
+// Mobile Phantom connection hook with visibilitychange detection
 export const useMobileConnect = (): { connectMobilePhantom: () => void } => {
   const connectMobilePhantom = () => {
     if (typeof window === "undefined") return;
@@ -51,20 +51,30 @@ export const useMobileConnect = (): { connectMobilePhantom: () => void } => {
     const currentUrl = encodeURIComponent(window.location.href);
     const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
 
-    // Hidden iframe for iOS compatibility
-    const iframe = document.createElement("iframe");
-    iframe.src = deepLink;
-    iframe.style.display = "none";
-    iframe.style.width = "1px";
-    iframe.style.height = "1px";
-    document.body.appendChild(iframe);
+    let appOpened = false;
 
-    // Timeout fallback: redirect to download if app not opened
+    // Listen for visibility change to detect if user switched to Phantom app
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        appOpened = true;
+        console.log("Phantom app opened successfully"); // Optional logging
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Direct redirect to Phantom deep link (works on all browsers)
+    window.location.href = deepLink;
+
+    // Timeout fallback: If app didn't open within 2s, redirect to download
+    // This handles cases where Phantom is not installed or user cancels
     setTimeout(() => {
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
+      if (!appOpened) {
+        console.log("Phantom not detected, redirecting to download"); // Optional logging
         window.location.href = "https://phantom.app/download";
       }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     }, 2000);
   };
 
