@@ -2,8 +2,8 @@
 
 // WalletProvider.tsx - Solana wallet integration for desktop and mobile web
 // Desktop: Uses wallet adapters for browser extensions with auto-connect
-// Mobile: Detects Phantom app via deep link, opens directly if installed
-// Fallback: redirects to download page only if Phantom not installed
+// Mobile: Uses deep link to open Phantom app, detects app open via visibilitychange
+// Fallback: Redirects to download page only if Phantom not installed
 
 import React, { FC, ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
@@ -55,18 +55,19 @@ export const useMobileConnect = (): { connectMobilePhantom: () => void } => {
 
     let appOpened = false;
 
+    // Listen for visibility change to detect if user switched to Phantom app
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        appOpened = true; // User switched to Phantom app
+        appOpened = true; // App opened successfully
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Open Phantom directly
+    // Open Phantom via deep link
     window.location.href = phantomDeepLink;
 
-    // Fallback: if Phantom not installed, redirect after 2s
+    // Fallback: If app didn't open within 2s, redirect to download page
     setTimeout(() => {
       if (!appOpened) {
         window.location.href = "https://phantom.app/download";
