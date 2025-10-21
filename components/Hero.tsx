@@ -9,6 +9,7 @@ import HCaptcha from "@hcaptcha/react-hcaptcha";
 
 export default function Hero() {
   const { wallets, select, connected, connect, publicKey } = useWallet();
+  const { connectMobilePhantom } = useMobileConnect();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
 
