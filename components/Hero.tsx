@@ -41,23 +41,39 @@ export default function Hero() {
     }
 
     try {
-      if (typeof window === 'undefined') return;
+      if (typeof window === "undefined") return;
 
-      // Wait until wallet is ready
-      if (!wallet || wallet.readyState === 'Unsupported') {
-        console.warn("Phantom not ready yet... retrying");
-        setTimeout(() => handleConnect(), 300);
+      // 1. Detect Phantom injection (desktop or in-app mobile)
+      const getPhantomProvider = () =>
+        window.solana && window.solana.isPhantom ? window.solana : null;
+
+      let provider = getPhantomProvider();
+      let attempts = 0;
+
+      while (!provider && attempts < 10) {
+        console.log("⏳ Waiting for Phantom to inject...");
+        await new Promise((r) => setTimeout(r, 300));
+        provider = getPhantomProvider();
+        attempts++;
+      }
+
+      if (!provider) {
+        console.warn("⚠️ Phantom not detected, falling back to Mobile Wallet Adapter...");
+        // Fall back to MWA
+        if (!connected) {
+          await connect();
+        }
         return;
       }
 
-      // Attempt connection if not already connected
-      if (!connected) {
-        await connect();
+      // 2. Attempt connection
+      if (!provider.isConnected) {
+        await provider.connect();
       }
 
-      console.log("✅ Connected to:", wallet.adapter?.name, publicKey?.toBase58());
-    } catch (error) {
-      console.error('Connection failed:', error);
+      console.log(`✅ Connected to Phantom: ${provider.publicKey?.toBase58()}`);
+    } catch (err) {
+      console.error("❌ Connection failed:", err);
     }
   }
 
