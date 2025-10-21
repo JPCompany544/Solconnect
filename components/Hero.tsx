@@ -10,7 +10,7 @@ import { useMobileConnect } from "./WalletProvider";
 
 export default function Hero() {
   const [token, setToken] = useState<string | null>(null);
-  const { wallet, connected, connect, publicKey } = useWallet();
+  const { wallets, select, connected, connect, publicKey } = useWallet();
   const router = useRouter();
   const { connectMobilePhantom } = useMobileConnect();
 
@@ -41,19 +41,20 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile deep link
+      // Mobile: open Phantom app via deep link
       connectMobilePhantom();
     } else {
-      // Desktop wallet
-      if (!wallet) {
-        alert("No wallet selected. Please choose Phantom or Solflare.");
+      // Desktop: auto-select Phantom and connect
+      const phantomWallet = wallets.find(wallet => wallet.adapter.name === "Phantom");
+      if (!phantomWallet) {
+        alert("Please install Phantom wallet to continue.");
         return;
       }
+      select(phantomWallet.adapter.name);
       try {
         await connect();
       } catch (err) {
-        console.error(err);
-        alert("Wallet connection failed.");
+        console.error("Connection failed:", err);
       }
     }
   };
