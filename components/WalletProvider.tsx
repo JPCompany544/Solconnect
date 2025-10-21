@@ -51,11 +51,12 @@ const useMobileConnect = (): {
     inProgress.current = true;
 
     const currentUrl = encodeURIComponent(window.location.origin);
-    const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
+    const redirectUri = encodeURIComponent(`${window.location.origin}/phantom-callback`);
     const cluster = "mainnet";
 
     // Phantom deep link for mobile web
-    const deepLink = `phantom://connect?app_url=${currentUrl}&redirect_uri=${redirectUri}&cluster=${cluster}`;
+   const deepLink = `phantom://connect?app_url=${encodeURIComponent(window.location.origin)}&redirect_uri=${redirectUri}&cluster=mainnet`;
+
 
     let appOpened = false;
 
