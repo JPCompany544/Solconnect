@@ -42,9 +42,12 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
 };
 
 // Mobile Phantom connection hook
-export const useMobileConnect = (): { connectMobilePhantom: () => void; downloadModalOpen: boolean } => {
+export const useMobileConnect = (): {
+  connectMobilePhantom: () => void;
+  downloadModalOpen: boolean;
+} => {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  let inProgress = false; // debounce multiple clicks
+  let inProgress = false; // prevent multiple clicks
 
   const connectMobilePhantom = () => {
     if (typeof window === "undefined" || inProgress) return;
@@ -54,6 +57,7 @@ export const useMobileConnect = (): { connectMobilePhantom: () => void; download
     const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
     let appOpened = false;
 
+    // Listen for visibility change to detect if user switched to Phantom app
     const handleVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
@@ -61,10 +65,9 @@ export const useMobileConnect = (): { connectMobilePhantom: () => void; download
         inProgress = false;
       }
     };
-
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // iOS/Safari reliable: hidden iframe + deep link
+    // iOS/Safari trick: hidden iframe
     const iframe = document.createElement("iframe");
     iframe.src = deepLink;
     iframe.style.display = "none";
@@ -72,13 +75,15 @@ export const useMobileConnect = (): { connectMobilePhantom: () => void; download
     iframe.style.height = "1px";
     document.body.appendChild(iframe);
 
-    // Remove iframe after 1s to avoid memory leaks
-    setTimeout(() => document.body.removeChild(iframe), 1000);
+    // Cleanup iframe after 1s
+    setTimeout(() => {
+      if (iframe.parentNode) document.body.removeChild(iframe);
+    }, 1000);
 
     // Timeout fallback: 3s
     setTimeout(() => {
       if (!appOpened) {
-        setDownloadModalOpen(true); // show modal instead of forced redirect
+        setDownloadModalOpen(true); // show download modal
         inProgress = false;
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);

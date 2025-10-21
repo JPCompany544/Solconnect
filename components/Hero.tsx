@@ -41,6 +41,7 @@ export default function Hero() {
     }
 
     if (isMobile) {
+      // Mobile: open Phantom via deep link
       connectMobilePhantom();
     } else {
       // Desktop: auto-select Phantom and connect
@@ -60,8 +61,10 @@ export default function Hero() {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 py-20">
+      {/* Background overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-blue-900/20" />
 
+      {/* Blurred shapes */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg blur-xl" />
         <div className="absolute bottom-20 right-20 w-40 h-40 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg blur-xl" />
@@ -143,7 +146,7 @@ export default function Hero() {
         </motion.div>
       </div>
 
-      {/* Download Modal for mobile if Phantom is not detected */}
+      {/* Mobile Download Modal */}
       {downloadModalOpen && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-xs text-center">
