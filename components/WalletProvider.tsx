@@ -1,6 +1,6 @@
 "use client";
 
-// WalletProvider.tsx - Production-ready Phantom wallet integration for Next.js
+// WalletProvider.tsx - Mobile + Desktop Phantom flow for Next.js
 
 import React, { FC, ReactNode, useMemo, useState, useRef, useEffect } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
@@ -23,10 +23,8 @@ export const WalletConnectionProvider: FC<Props> = ({ children }) => {
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
   const wallets = useMemo(() => [new PhantomWalletAdapter()], [network]);
 
-  if (isMobile) {
-    // Mobile: just provide connection context; deep link handles connection
-    return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
-  }
+  // Mobile: only provide connection context, deep link handles approval
+  if (isMobile) return <ConnectionProvider endpoint={endpoint}>{children}</ConnectionProvider>;
 
   // Desktop: WalletProvider with autoConnect
   return (
@@ -44,18 +42,22 @@ export const useMobileConnect = (): {
   downloadModalOpen: boolean;
 } => {
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
-  const inProgress = useRef(false); // persist across renders
+  const inProgress = useRef(false); // prevent multiple clicks
 
   const connectMobilePhantom = () => {
     if (typeof window === "undefined" || inProgress.current) return;
     inProgress.current = true;
 
-    const currentUrl = encodeURIComponent(window.location.href);
-    const deepLink = `phantom://connect?app_url=${currentUrl}`;
+    const currentUrl = encodeURIComponent(window.location.origin);
+    const redirectUri = encodeURIComponent(`${window.location.origin}/dashboard`);
+    const cluster = "mainnet";
+
+    // Deep link that Phantom understands for connection
+    const deepLink = `phantom://connect?app_url=${currentUrl}&redirect_uri=${redirectUri}&cluster=${cluster}`;
 
     let appOpened = false;
 
-    // Detect if user switches to Phantom app (best effort)
+    // Detect if user switches to Phantom app
     const handleVisibilityChange = () => {
       if (document.hidden) {
         appOpened = true;
@@ -65,7 +67,7 @@ export const useMobileConnect = (): {
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // iOS Safari: attempt via hidden iframe
+    // iOS Safari: attempt hidden iframe first
     const iframe = document.createElement("iframe");
     iframe.src = deepLink;
     iframe.style.display = "none";
@@ -73,7 +75,6 @@ export const useMobileConnect = (): {
     iframe.style.height = "1px";
     document.body.appendChild(iframe);
 
-    // Remove iframe after 1s
     setTimeout(() => {
       if (iframe.parentNode) document.body.removeChild(iframe);
     }, 1000);
@@ -83,7 +84,7 @@ export const useMobileConnect = (): {
       window.location.href = deepLink;
     }, 50);
 
-    // Timeout fallback: show download modal if app not opened in 3s
+    // If Phantom not installed / user didn’t open, show download modal after 3s
     setTimeout(() => {
       if (!appOpened) setDownloadModalOpen(true);
       inProgress.current = false;
@@ -91,7 +92,7 @@ export const useMobileConnect = (): {
     }, 3000);
   };
 
-  // Optional: close download modal automatically if user installed Phantom
+  // Optional: automatically hide download modal if Phantom is installed
   useEffect(() => {
     if (downloadModalOpen && window.solana?.isPhantom) {
       setDownloadModalOpen(false);
