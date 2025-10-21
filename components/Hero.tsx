@@ -45,7 +45,7 @@ export default function Hero() {
     }
 
     if (isMobile) {
-      // Mobile: open Phantom via deep link
+      // Mobile: open Phantom via deep link; user approves in-app
       connectMobilePhantom();
     } else {
       // Desktop: select Phantom and connect
@@ -153,18 +153,6 @@ export default function Hero() {
           </div>
         </motion.div>
       </div>
-
-      {/* Mobile overlay instructions while user approves Phantom connection */}
-      {isMobile && !connected && (
-        <div className="fixed inset-0 bg-black/70 flex flex-col items-center justify-center z-40 px-6 text-center">
-          <p className="text-white text-lg mb-4">
-            If Phantom opened, please approve the connection in the app.
-          </p>
-          <p className="text-white/80 text-sm">
-            Once approved, you will be redirected back automatically.
-          </p>
-        </div>
-      )}
 
       {/* Download modal if Phantom fails to open */}
       {downloadModalOpen && (
