@@ -10,7 +10,8 @@ import HCaptcha from '@hcaptcha/react-hcaptcha'
 
 export default function Hero() {
   const [token, setToken] = useState<string | null>(null)
-  const { publicKey, connect, disconnect, connected, wallet, select } = useWallet()
+  const [phantomAvailable, setPhantomAvailable] = useState(true) // Track if Phantom is available for fallback UI
+  const { connected, connect, publicKey } = useWallet()
   const router = useRouter()
 
   useEffect(() => {
@@ -43,14 +44,14 @@ export default function Hero() {
     try {
       if (typeof window === "undefined") return;
 
-      // 1. Detect Phantom injection (desktop or in-app mobile)
+      // 1. Detect Phantom injection (desktop or in-app mobile) - Async check to avoid hydration issues
       const getPhantomProvider = () =>
         window.solana && window.solana.isPhantom ? window.solana : null;
 
       let provider = getPhantomProvider();
       let attempts = 0;
 
-      while (!provider && attempts < 10) {
+      while (!provider && attempts < 10) { // Bounded loop to prevent infinite retry
         console.log("⏳ Waiting for Phantom to inject...");
         await new Promise((r) => setTimeout(r, 300));
         provider = getPhantomProvider();
@@ -59,6 +60,7 @@ export default function Hero() {
 
       if (!provider) {
         console.warn("⚠️ Phantom not detected, falling back to Mobile Wallet Adapter...");
+        setPhantomAvailable(false)
         // Fall back to MWA
         if (!connected) {
           await connect();
@@ -108,18 +110,35 @@ export default function Hero() {
           Your trusted <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="inline w-8 h-8 rounded-full align-baseline" /> loan companion
         </motion.h1>
 
-        <motion.button
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)' }}
-          whileTap={{ scale: 0.98 }}
-          className={`flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation`}
-          onClick={handleConnect}
-        >
-          <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
-          {connected ? 'Connected' : 'Connect Phantom'}
-        </motion.button>
+        {phantomAvailable ? ( // Conditional UI: show connect button if Phantom available, else install link
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            whileHover={{ scale: 1.05, boxShadow: '0 0 30px rgba(139, 92, 246, 0.5)' }}
+            whileTap={{ scale: 0.98 }}
+            className={`flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation`}
+            onClick={handleConnect}
+          >
+            <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
+            {connected ? 'Connected' : 'Connect Phantom'}
+          </motion.button>
+        ) : (
+          <motion.a
+            href="https://phantom.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center mx-auto bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation"
+          >
+            <img src="/images/phantom-wallet-logo.png" alt="Phantom" className="w-6 h-6 rounded-full mr-2" />
+            Install Phantom Wallet
+          </motion.a>
+        )}
 
         <motion.div
           initial={{ opacity: 0 }}
