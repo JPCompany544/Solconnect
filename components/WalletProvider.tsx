@@ -49,7 +49,8 @@ export const useMobileConnect = (): {
     inProgress.current = true;
 
     const currentUrl = encodeURIComponent(window.location.href);
-    const deepLink = `https://phantom.app/ul/v1/connect?app_url=${currentUrl}`;
+    const deepLink = `phantom://connect?app_url=${currentUrl}`;
+
     let appOpened = false;
 
     // iOS/Android visibility detection (best effort)
