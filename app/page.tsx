@@ -1,13 +1,26 @@
-import TickerBar from '@/components/TickerBar'
-import Hero from '@/components/Hero'
-import Footer from '@/components/Footer'
+"use client";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function Home() {
+export default function ConnectPhantomPage() {
+  const { connect, connected, publicKey } = useWallet();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (connected && publicKey) {
+      router.push("/dashboard");
+    }
+  }, [connected, publicKey, router]);
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
-      <TickerBar />
-      <Hero />
-      <Footer />
+    <main className="flex flex-col items-center justify-center h-screen text-center">
+      <button
+        onClick={() => connect?.()}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-md"
+      >
+        {connected ? "Connected" : "Connect Phantom"}
+      </button>
     </main>
-  )
+  );
 }

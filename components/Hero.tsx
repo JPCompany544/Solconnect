@@ -46,7 +46,7 @@ export default function Hero() {
 
       // 1. Detect Phantom injection (desktop or in-app mobile) - Async check to avoid hydration issues
       const getPhantomProvider = () =>
-        window.solana && window.solana.isPhantom ? window.solana : null;
+        (window as any).solana && (window as any).solana.isPhantom ? (window as any).solana : null;
 
       let provider = getPhantomProvider();
       let attempts = 0;

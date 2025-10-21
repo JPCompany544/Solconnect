@@ -1,32 +1,30 @@
 "use client";
+
 import React, { FC, ReactNode, useMemo } from "react";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { SolanaMobileWalletAdapter, createDefaultAddressSelector, createDefaultAuthorizationResultCache, createDefaultWalletNotFoundHandler } from "@solana-mobile/wallet-adapter-mobile";
+import { MobileWalletAdapter } from "@solana-mobile/wallet-adapter-mobile";
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 
 interface Props {
   children: ReactNode;
 }
 
 export const WalletConnectionProvider: FC<Props> = ({ children }) => {
-  const network = WalletAdapterNetwork.Mainnet;
+  const network = WalletAdapterNetwork.Mainnet; // or Devnet if testing
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
   const wallets = useMemo(
     () => [
-      new SolanaMobileWalletAdapter({
-        addressSelector: createDefaultAddressSelector(),
-        appIdentity: { name: 'SolConnect App' },
-        authorizationResultCache: createDefaultAuthorizationResultCache(),
-        chain: 'mainnet-beta',
-        onWalletNotFound: createDefaultWalletNotFoundHandler(),
+      new MobileWalletAdapter({
+        appIdentity: { name: "SolConnect" },
+        authorizationResultCache: "local",
+        cluster: endpoint,
       }),
       new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
     ],
-    [network]
+    [endpoint]
   );
 
   return (
