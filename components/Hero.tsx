@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useRouter } from "next/navigation";
 import HCaptcha from "@hcaptcha/react-hcaptcha";
+import { useMobileConnect } from "./WalletProvider";
 
 export default function Hero() {
   const { wallets, select, connected, connect, publicKey } = useWallet();
