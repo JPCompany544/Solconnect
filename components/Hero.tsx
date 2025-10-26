@@ -13,6 +13,7 @@ export default function Hero() {
   const { connectMobilePhantom } = useMobileConnect();
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Detect mobile device
   const isMobile = useMemo(() => {
@@ -20,6 +21,22 @@ export default function Hero() {
     const ua = navigator.userAgent.toLowerCase();
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
   }, []);
+
+  // Detect if user is inside Phantom's in-app browser
+  const isPhantomInApp = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /Phantom/i.test(navigator.userAgent);
+  }, []);
+
+  // Helper function to redirect to Phantom deep link
+  const redirectToPhantom = () => {
+    if (typeof window === "undefined") return;
+    const currentUrl = window.location.href;
+    const encodedUrl = encodeURIComponent(currentUrl);
+    const phantomDeepLink = `https://phantom.app/ul/browse/${encodedUrl}`;
+    console.log("Redirecting to Phantom app:", phantomDeepLink);
+    window.location.href = phantomDeepLink;
+  };
 
   // Redirect to dashboard when wallet connects
   useEffect(() => {
@@ -45,39 +62,61 @@ export default function Hero() {
       return;
     }
 
-    let selectedWallet;
-    if (isMobile) {
-      // Mobile: select SolanaMobileWalletAdapter (works in Phantom app browser)
-      selectedWallet = wallets.find((w) => w.adapter.name !== "Phantom");
-      if (!selectedWallet) {
-        const available = wallets.map(w => w.adapter.name).join(', ');
-        console.error("Mobile wallet adapter not found. Available wallets:", available);
-        alert(`Mobile wallet adapter not found. Available: ${available}. Please try again.`);
-        return;
-      }
-    } else {
-      // Desktop: select Phantom and connect
-      selectedWallet = wallets.find((w) => w.adapter.name === "Phantom");
-      if (!selectedWallet) {
-        console.error("Phantom wallet not found.");
-        alert("Please install Phantom wallet to continue.");
-        return;
-      }
-      // Check for window.solana
-      if (typeof window === 'undefined' || !window.solana || !window.solana.isPhantom) {
-        console.error("Phantom wallet not detected in browser.");
-        alert("Phantom wallet not detected. Please install the extension.");
-        return;
-      }
-      console.log("Selecting wallet:", selectedWallet.adapter.name);
-      select(selectedWallet.adapter.name);
-      try {
+    setIsConnecting(true);
+
+    try {
+      // Mobile device logic
+      if (isMobile) {
+        // Check if we're inside Phantom's in-app browser
+        if (isPhantomInApp || (typeof window !== 'undefined' && window.solana?.isPhantom)) {
+          // Inside Phantom app - connect directly using Phantom adapter
+          console.log("Inside Phantom in-app browser, connecting directly...");
+          const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
+          
+          if (phantomWallet) {
+            console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
+            select(phantomWallet.adapter.name);
+            await connect();
+            console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
+          } else {
+            console.error("Phantom wallet adapter not found in wallets list.");
+            alert("Phantom wallet not available. Please try again.");
+          }
+        } else {
+          // External mobile browser - redirect to Phantom app
+          console.log("External mobile browser detected, redirecting to Phantom app...");
+          redirectToPhantom();
+          return; // Exit early as we're redirecting
+        }
+      } else {
+        // Desktop: select Phantom and connect
+        const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
+        
+        if (!phantomWallet) {
+          console.error("Phantom wallet not found.");
+          alert("Please install Phantom wallet extension to continue.");
+          setIsConnecting(false);
+          return;
+        }
+        
+        // Check for window.solana
+        if (typeof window === 'undefined' || !window.solana || !window.solana.isPhantom) {
+          console.error("Phantom wallet not detected in browser.");
+          alert("Phantom wallet not detected. Please install the extension.");
+          setIsConnecting(false);
+          return;
+        }
+        
+        console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
+        select(phantomWallet.adapter.name);
         await connect();
-        console.log("Successfully connected to wallet:", selectedWallet.adapter.name, "Public key:", publicKey?.toString());
-      } catch (err) {
-        console.error("Wallet connection failed:", err);
-        alert("Connection failed. Please try again.");
+        console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
       }
+    } catch (err) {
+      console.error("Wallet connection failed:", err);
+      alert("Connection failed. Please try again.");
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -126,15 +165,16 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.4 }}
           whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(139, 92, 246, 0.5)" }}
           whileTap={{ scale: 0.98 }}
-          className="flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation"
+          className="flex items-center mx-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white font-semibold py-4 px-8 rounded-lg mb-8 transition-all duration-300 shadow-lg min-h-[48px] touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleConnect}
+          disabled={isConnecting || connected}
         >
           <img
             src="/images/phantom-wallet-logo.png"
             alt="Phantom"
             className="w-6 h-6 rounded-full mr-2"
           />
-          {connected ? "Connected" : "Connect Phantom"}
+          {connected ? "Connected ✅" : isConnecting ? "Connecting..." : "Connect Phantom"}
         </motion.button>
 
         {/* Security badges */}
