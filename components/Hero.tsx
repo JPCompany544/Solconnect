@@ -60,6 +60,12 @@ export default function Hero() {
       return;
     }
 
+    // Prevent redundant connection attempts
+    if (connected) {
+      console.log("Wallet already connected, skipping connection attempt.");
+      return;
+    }
+
     setIsConnecting(true);
 
     try {
@@ -82,7 +88,12 @@ export default function Hero() {
               await new Promise(resolve => setTimeout(resolve, 250));
               
               try {
-                await connect();
+                if (!connected) {
+                  await connect();
+                } else {
+                  console.log("Already connected, skipping connect call.");
+                  return;
+                }
                 console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
               } catch (connectErr) {
                 // Check if wallet actually connected despite error
@@ -94,7 +105,9 @@ export default function Hero() {
                 console.log("First connection attempt failed, retrying...");
                 await new Promise(resolve => setTimeout(resolve, 200));
                 try {
-                  await connect();
+                  if (!connected) {
+                    await connect();
+                  }
                   console.log("Successfully connected on retry. Public key:", publicKey?.toString());
                 } catch (retryErr) {
                   // Check again if connected
@@ -148,7 +161,12 @@ export default function Hero() {
         await new Promise(resolve => setTimeout(resolve, 250));
         
         try {
-          await connect();
+          if (!connected) {
+            await connect();
+          } else {
+            console.log("Already connected, skipping connect call.");
+            return;
+          }
           console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
         } catch (connectErr) {
           // Check if wallet actually connected despite error
@@ -160,7 +178,9 @@ export default function Hero() {
           console.log("First connection attempt failed, retrying...");
           await new Promise(resolve => setTimeout(resolve, 200));
           try {
-            await connect();
+            if (!connected) {
+              await connect();
+            }
             console.log("Successfully connected on retry. Public key:", publicKey?.toString());
           } catch (retryErr) {
             // Check again if connected
