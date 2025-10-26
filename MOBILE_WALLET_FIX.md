@@ -1,41 +1,53 @@
 # Mobile Phantom Wallet Connection Fix
 
 ## Summary
-Fixed the Phantom wallet connection behavior on mobile devices to properly handle both in-app and external browser scenarios.
+Fixed the Phantom wallet connection behavior on mobile devices to properly handle both in-app and external browser scenarios, plus added silent retry logic for desktop/in-app connection failures.
 
 ## Changes Made
 
 ### 1. **In-App Browser Detection**
 - Added `isPhantomInApp` detection using `navigator.userAgent` check for `/Phantom/i`
+- Improved mobile detection using `/Mobi|Android/i` pattern
 - Dual check: UserAgent + `window.solana?.isPhantom` for reliability
 
-### 2. **Deep Link Redirect Function**
+### 2. **Deep Link Redirect Function (FIXED)**
 - Created `redirectToPhantom()` helper that:
   - Gets current URL dynamically
   - Encodes it properly
-  - Constructs deep link: `https://phantom.app/ul/browse/{encodedUrl}`
-  - Redirects user to Phantom app
+  - Constructs deep link using **`phantom://` scheme**: `phantom://browse/{encodedUrl}`
+  - This properly launches the Phantom app instead of opening phantom.com
+  - Redirects user to Phantom app which loads the dApp inside
 
-### 3. **Smart Connection Flow**
+### 3. **Silent Retry Logic (NEW)**
+- Added automatic retry mechanism for connection failures
+- If first `connect()` attempt fails, waits 200ms and retries silently
+- No error popup shown to user unless both attempts fail
+- Fixes the "connection failed, please try again" issue on first click
+- Applies to both desktop and in-app browser connections
+
+### 4. **Smart Connection Flow**
 The `handleConnect()` function now handles three scenarios:
 
 #### **Mobile - External Browser (Chrome/Safari)**
 - Detects mobile device without Phantom in-app
-- Automatically redirects to Phantom app via deep link
-- User opens dApp inside Phantom
+- Automatically redirects to Phantom app via `phantom://` deep link
+- Phantom app launches and loads dApp inside its browser
+- **No more redirect to phantom.com download page**
 
 #### **Mobile - Phantom In-App Browser**
 - Detects Phantom in-app environment
+- Verifies `window.solana?.isPhantom` is available
 - Selects Phantom wallet adapter directly
-- Triggers standard Solana wallet connection
+- Triggers connection with silent retry on failure
 - No more "Mobile Wallet Adapter not found" error
 
 #### **Desktop**
-- Unchanged behavior
 - Checks for Phantom extension
-- Connects via standard flow
+- Verifies `window.solana?.isPhantom` provider
+- Connects via standard flow with silent retry
+- **No more initial "connection failed" error**
 
-### 4. **UI Improvements**
+### 5. **UI Improvements**
 - Added `isConnecting` state
 - Button shows three states:
   - "Connect Phantom" (default)
@@ -74,7 +86,15 @@ The `handleConnect()` function now handles three scenarios:
 
 ### Key Code Sections
 
-**Detection Logic:**
+**Mobile Detection (Improved):**
+```typescript
+const isMobile = useMemo(() => {
+  if (typeof navigator === "undefined") return false;
+  return /Mobi|Android/i.test(navigator.userAgent);
+}, []);
+```
+
+**In-App Detection:**
 ```typescript
 const isPhantomInApp = useMemo(() => {
   if (typeof navigator === "undefined") return false;
@@ -82,36 +102,59 @@ const isPhantomInApp = useMemo(() => {
 }, []);
 ```
 
-**Deep Link Construction:**
+**Deep Link Construction (FIXED - phantom:// scheme):**
 ```typescript
 const redirectToPhantom = () => {
-  const currentUrl = window.location.href;
-  const encodedUrl = encodeURIComponent(currentUrl);
-  const phantomDeepLink = `https://phantom.app/ul/browse/${encodedUrl}`;
+  if (typeof window === "undefined") return;
+  const siteUrl = encodeURIComponent(window.location.href);
+  const phantomDeepLink = `phantom://browse/${siteUrl}`;
+  console.log("Redirecting to Phantom app:", phantomDeepLink);
   window.location.href = phantomDeepLink;
 };
 ```
 
-**Connection Flow:**
+**Connection Flow with Silent Retry:**
 ```typescript
 if (isMobile) {
-  if (isPhantomInApp || window.solana?.isPhantom) {
-    // Connect directly
+  if (isPhantomInApp) {
+    // Verify provider exists
+    if (window.solana?.isPhantom) {
+      select(phantomWallet.adapter.name);
+      try {
+        await connect();
+      } catch (connectErr) {
+        // Silent retry after 200ms
+        await new Promise(resolve => setTimeout(resolve, 200));
+        await connect();
+      }
+    }
   } else {
     // Redirect to Phantom app
     redirectToPhantom();
+  }
+} else {
+  // Desktop with retry
+  select(phantomWallet.adapter.name);
+  try {
+    await connect();
+  } catch (connectErr) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await connect();
   }
 }
 ```
 
 ## Benefits
+✅ **Fixed mobile redirect** - Uses `phantom://` scheme to launch app (not phantom.com)  
+✅ **No more "connection failed" on first click** - Silent retry handles transient errors  
 ✅ No more "Mobile Wallet Adapter not found" error  
-✅ Seamless mobile experience  
-✅ Automatic redirect to Phantom app  
+✅ Seamless mobile experience with proper deep linking  
+✅ Automatic redirect to Phantom app from external browsers  
 ✅ Works in both in-app and external browsers  
-✅ Desktop functionality unchanged  
-✅ Better UX with loading states  
+✅ Desktop functionality improved with retry logic  
+✅ Better UX with loading states and no error popups  
 ✅ TypeScript-safe implementation  
+✅ Clean console output with informative logs  
 
 ## Deployment
 The fix is ready to deploy. Test on:

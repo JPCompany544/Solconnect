@@ -18,8 +18,7 @@ export default function Hero() {
   // Detect mobile device
   const isMobile = useMemo(() => {
     if (typeof navigator === "undefined") return false;
-    const ua = navigator.userAgent.toLowerCase();
-    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(ua);
+    return /Mobi|Android/i.test(navigator.userAgent);
   }, []);
 
   // Detect if user is inside Phantom's in-app browser
@@ -31,9 +30,8 @@ export default function Hero() {
   // Helper function to redirect to Phantom deep link
   const redirectToPhantom = () => {
     if (typeof window === "undefined") return;
-    const currentUrl = window.location.href;
-    const encodedUrl = encodeURIComponent(currentUrl);
-    const phantomDeepLink = `https://phantom.app/ul/browse/${encodedUrl}`;
+    const siteUrl = encodeURIComponent(window.location.href);
+    const phantomDeepLink = `phantom://browse/${siteUrl}`;
     console.log("Redirecting to Phantom app:", phantomDeepLink);
     window.location.href = phantomDeepLink;
   };
@@ -68,19 +66,39 @@ export default function Hero() {
       // Mobile device logic
       if (isMobile) {
         // Check if we're inside Phantom's in-app browser
-        if (isPhantomInApp || (typeof window !== 'undefined' && window.solana?.isPhantom)) {
-          // Inside Phantom app - connect directly using Phantom adapter
+        if (isPhantomInApp) {
+          // Inside Phantom app - connect directly
           console.log("Inside Phantom in-app browser, connecting directly...");
-          const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
           
-          if (phantomWallet) {
-            console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
-            select(phantomWallet.adapter.name);
-            await connect();
-            console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
+          // Verify window.solana is available
+          if (typeof window !== 'undefined' && window.solana?.isPhantom) {
+            const phantomWallet = wallets.find((w) => w.adapter.name === "Phantom");
+            
+            if (phantomWallet) {
+              console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
+              select(phantomWallet.adapter.name);
+              
+              try {
+                await connect();
+                console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
+              } catch (connectErr) {
+                // Silent retry after short delay
+                console.log("First connection attempt failed, retrying...");
+                await new Promise(resolve => setTimeout(resolve, 200));
+                await connect();
+                console.log("Successfully connected on retry. Public key:", publicKey?.toString());
+              }
+            } else {
+              console.error("Phantom wallet adapter not found in wallets list.");
+              alert("Phantom wallet not available. Please try again.");
+              setIsConnecting(false);
+              return;
+            }
           } else {
-            console.error("Phantom wallet adapter not found in wallets list.");
-            alert("Phantom wallet not available. Please try again.");
+            console.error("Phantom provider not available.");
+            alert("Phantom wallet not detected. Please try again.");
+            setIsConnecting(false);
+            return;
           }
         } else {
           // External mobile browser - redirect to Phantom app
@@ -109,11 +127,20 @@ export default function Hero() {
         
         console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
         select(phantomWallet.adapter.name);
-        await connect();
-        console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
+        
+        try {
+          await connect();
+          console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
+        } catch (connectErr) {
+          // Silent retry after short delay
+          console.log("First connection attempt failed, retrying...");
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await connect();
+          console.log("Successfully connected on retry. Public key:", publicKey?.toString());
+        }
       }
     } catch (err) {
-      console.error("Wallet connection failed:", err);
+      console.error("Wallet connection failed after retry:", err);
       alert("Connection failed. Please try again.");
     } finally {
       setIsConnecting(false);
