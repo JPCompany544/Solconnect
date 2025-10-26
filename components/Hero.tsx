@@ -78,15 +78,31 @@ export default function Hero() {
               console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
               select(phantomWallet.adapter.name);
               
+              // Wait for provider to be fully ready
+              await new Promise(resolve => setTimeout(resolve, 250));
+              
               try {
                 await connect();
                 console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
               } catch (connectErr) {
+                // Check if wallet actually connected despite error
+                if (connected) {
+                  console.log("Connection succeeded despite error, ignoring...");
+                  return;
+                }
                 // Silent retry after short delay
                 console.log("First connection attempt failed, retrying...");
                 await new Promise(resolve => setTimeout(resolve, 200));
-                await connect();
-                console.log("Successfully connected on retry. Public key:", publicKey?.toString());
+                try {
+                  await connect();
+                  console.log("Successfully connected on retry. Public key:", publicKey?.toString());
+                } catch (retryErr) {
+                  // Check again if connected
+                  if (!connected) {
+                    throw retryErr; // Only throw if truly failed
+                  }
+                  console.log("Connected successfully after retry despite error.");
+                }
               }
             } else {
               console.error("Phantom wallet adapter not found in wallets list.");
@@ -128,20 +144,41 @@ export default function Hero() {
         console.log("Selecting Phantom wallet:", phantomWallet.adapter.name);
         select(phantomWallet.adapter.name);
         
+        // Wait for provider to be fully ready
+        await new Promise(resolve => setTimeout(resolve, 250));
+        
         try {
           await connect();
           console.log("Successfully connected to Phantom. Public key:", publicKey?.toString());
         } catch (connectErr) {
+          // Check if wallet actually connected despite error
+          if (connected) {
+            console.log("Connection succeeded despite error, ignoring...");
+            return;
+          }
           // Silent retry after short delay
           console.log("First connection attempt failed, retrying...");
           await new Promise(resolve => setTimeout(resolve, 200));
-          await connect();
-          console.log("Successfully connected on retry. Public key:", publicKey?.toString());
+          try {
+            await connect();
+            console.log("Successfully connected on retry. Public key:", publicKey?.toString());
+          } catch (retryErr) {
+            // Check again if connected
+            if (!connected) {
+              throw retryErr; // Only throw if truly failed
+            }
+            console.log("Connected successfully after retry despite error.");
+          }
         }
       }
     } catch (err) {
-      console.error("Wallet connection failed after retry:", err);
-      alert("Connection failed. Please try again.");
+      // Final check: only show error if wallet is not connected
+      if (!connected) {
+        console.error("Wallet connection failed after retry:", err);
+        alert("Connection failed. Please try again.");
+      } else {
+        console.log("Wallet connected successfully, ignoring error.");
+      }
     } finally {
       setIsConnecting(false);
     }
