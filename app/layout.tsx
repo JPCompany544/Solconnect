@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { WalletConnectionProvider } from '@/components/WalletProvider'
+import TawkToChat from '@/components/TawkToChat'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,6 +24,7 @@ export default function RootLayout({
         <WalletConnectionProvider>
           {children}
         </WalletConnectionProvider>
+        <TawkToChat />
       </body>
     </html>
   )
