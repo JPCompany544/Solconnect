@@ -285,7 +285,7 @@ export default function Hero() {
         >
           <div className="w-full max-w-xs grid place-items-center min-h-[78px] mt-4 md:mt-0">
             <HCaptcha
-              sitekey="10000000-ffff-ffff-ffff-000000000001"
+              sitekey="0760c644-e7dc-484c-a512-787acce2b960"
               onVerify={handleVerify}
               onExpire={handleExpire}
               onError={handleError}
