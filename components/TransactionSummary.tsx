@@ -10,7 +10,7 @@ interface TransactionSummaryProps {
 export default function TransactionSummary({ selectedAmount, onContinue }: TransactionSummaryProps) {
   const slippageTolerance = 0.005 // 0.5%
   const networkFeePercent = 0.09 // 9%
-  const networkFee = selectedAmount * networkFeePercent
+  const networkFee = selectedAmount === 1000 ? 45 : selectedAmount * networkFeePercent
   const minimumReceived = selectedAmount - networkFee
 
   return (
