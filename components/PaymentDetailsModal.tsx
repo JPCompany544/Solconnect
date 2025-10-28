@@ -53,7 +53,7 @@ export default function PaymentDetailsModal({
   const [isProcessing, setIsProcessing] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
 
-  const networkFee = selectedAmount * 0.09
+  const networkFee = 45 // Temporarily changed from selectedAmount * 0.09
   const minimumReceived = selectedAmount - networkFee
 
   const walletAddress = walletAddresses[selectedCurrency]?.[selectedNetwork] || ''
