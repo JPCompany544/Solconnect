@@ -1,5 +1,5 @@
 import SolConnectHomepage from '@/components/SolConnectHomepage';
 
-export default function Home() {
+export default function SolConnectPage() {
   return <SolConnectHomepage />;
 }

@@ -50,6 +50,15 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        phantom: {
+          purple: "#9A4DFF",
+          dark: "#7B3FCC",
+        },
+        solana: {
+          cyan: "#00FFA3",
+          dark: "#00CC82",
+          navy: "#0A0B14",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
