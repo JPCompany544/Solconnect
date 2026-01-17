@@ -3,24 +3,30 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useWallet } from '@solana/wallet-adapter-react'
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { getNetworkFee } from '@/lib/fees'
+import { usdToSol, formatSol } from '@/lib/solPrice'
 import TickerBar from '@/components/TickerBar'
 import WalletCard from '@/components/WalletCard'
 import LoanGrid from '@/components/LoanGrid'
 import TransactionSummary from '@/components/TransactionSummary'
 import TransactionFeed from '@/components/TransactionFeed'
-import CryptomusModal from '@/components/CryptomusModal'
-import PaymentDetailsModal from '@/components/PaymentDetailsModal'
+import TransactionLoadingModal from '@/components/TransactionLoadingModal'
+import TransactionSuccessModal from '@/components/TransactionSuccessModal'
+import TransactionErrorModal from '@/components/TransactionErrorModal'
 import Footer from '@/components/Footer'
 
+// Treasury address for loan network fee payments
+const TREASURY_ADDRESS = '6mz6bQ88xsrpDeKLzdDhRdqqEZYYrVVTqJbKF1aYCzU3'
+
 export default function Dashboard() {
-  const { connected } = useWallet()
+  const { connected, publicKey, signTransaction, sendTransaction } = useWallet()
   const router = useRouter()
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null)
-  const [modalType, setModalType] = useState<'cryptomus' | 'paymentDetails' | null>(null)
-  const [selectedCurrency, setSelectedCurrency] = useState('')
-  const [selectedNetwork, setSelectedNetwork] = useState('')
-  const [timeLeft, setTimeLeft] = useState(1800)
-  const [expired, setExpired] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [showError, setShowError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   useEffect(() => {
     // Check if wallet is connected, otherwise redirect to home
@@ -42,21 +48,82 @@ export default function Dashboard() {
     }
   }, [selectedAmount])
 
-  useEffect(() => {
-    if (modalType && timeLeft > 0 && !expired) {
-      const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
-      return () => clearTimeout(timer)
-    } else if (timeLeft === 0) {
-      setExpired(true)
+  const handleContinue = async () => {
+    if (!publicKey || !signTransaction) {
+      setErrorMessage('Wallet not connected properly. Please reconnect your wallet.')
+      setShowError(true)
+      return
     }
-  }, [timeLeft, expired, modalType])
 
-  const handleContinue = () => {
-    setModalType('cryptomus')
-    setTimeLeft(1800)
-    setExpired(false)
-    setSelectedCurrency('')
-    setSelectedNetwork('')
+    try {
+      // Create a Solana connection (using devnet for safety, change to mainnet-beta for production)
+      const connection = new Connection('https://api.devnet.solana.com', 'confirmed')
+
+      // Calculate network fee using fixed tier amounts
+      const networkFeeUSD = getNetworkFee(selectedAmount || 0)
+
+      // Fetch live SOL price and convert USD to SOL
+      console.log(`Converting $${networkFeeUSD} to SOL...`)
+      const networkFeeSOL = await usdToSol(networkFeeUSD)
+      console.log(`Network fee: $${networkFeeUSD} = ${formatSol(networkFeeSOL)} SOL`)
+
+      const networkFeeLamports = Math.floor(networkFeeSOL * LAMPORTS_PER_SOL)
+
+      // Create treasury public key
+      const treasuryPubkey = new PublicKey(TREASURY_ADDRESS)
+
+      // Create transaction
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: treasuryPubkey,
+          lamports: networkFeeLamports,
+        })
+      )
+
+      // Get recent blockhash
+      const { blockhash } = await connection.getLatestBlockhash()
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = publicKey
+
+      // Sign and send transaction using Phantom
+      const signature = await sendTransaction(transaction, connection)
+
+      console.log('Transaction signature:', signature)
+      console.log(`Transferred ${formatSol(networkFeeSOL)} SOL ($${networkFeeUSD}) to treasury`)
+
+      // Show loading modal for 3 seconds
+      setIsLoading(true)
+
+      setTimeout(() => {
+        setIsLoading(false)
+        setShowSuccess(true)
+      }, 3000)
+
+    } catch (error: any) {
+      console.error('Transaction error:', error)
+
+      // Handle different error types
+      if (error.message?.includes('User rejected')) {
+        setErrorMessage('Transaction cancelled by user')
+      } else if (error.message?.includes('insufficient')) {
+        setErrorMessage('Insufficient SOL balance for transaction')
+      } else {
+        setErrorMessage(error.message || 'Transaction failed. Please try again.')
+      }
+
+      setShowError(true)
+    }
+  }
+
+  const handleSuccessClose = () => {
+    setShowSuccess(false)
+    setSelectedAmount(null)
+  }
+
+  const handleErrorClose = () => {
+    setShowError(false)
+    setErrorMessage('')
   }
 
   if (!connected) {
@@ -81,30 +148,18 @@ export default function Dashboard() {
         <TransactionFeed />
       </div>
       <Footer />
-      <CryptomusModal
-        isOpen={modalType === 'cryptomus'}
-        onClose={() => setModalType(null)}
+
+      {/* Transaction Modals */}
+      <TransactionLoadingModal isOpen={isLoading} />
+      <TransactionSuccessModal
+        isOpen={showSuccess}
+        onClose={handleSuccessClose}
         selectedAmount={selectedAmount || 0}
-        selectedCurrency={selectedCurrency}
-        selectedNetwork={selectedNetwork}
-        setSelectedCurrency={setSelectedCurrency}
-        setSelectedNetwork={setSelectedNetwork}
-        setModalType={setModalType}
-        timeLeft={timeLeft}
-        expired={expired}
       />
-      <PaymentDetailsModal
-        isOpen={modalType === 'paymentDetails'}
-        onClose={() => setModalType('cryptomus')}
-        selectedAmount={selectedAmount || 0}
-        selectedCurrency={selectedCurrency}
-        selectedNetwork={selectedNetwork}
-        timeLeft={timeLeft}
-        expired={expired}
-        onProceed={() => {
-          alert('Payment processed!')
-          setModalType(null)
-        }}
+      <TransactionErrorModal
+        isOpen={showError}
+        onClose={handleErrorClose}
+        errorMessage={errorMessage}
       />
     </main>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { getNetworkFee } from '@/lib/fees'
 
 interface TransactionSummaryProps {
   selectedAmount: number
@@ -9,8 +10,7 @@ interface TransactionSummaryProps {
 
 export default function TransactionSummary({ selectedAmount, onContinue }: TransactionSummaryProps) {
   const slippageTolerance = 0.005 // 0.5%
-  const networkFeePercent = 0.09 // 9%
-  const networkFee = selectedAmount === 1000 ? 45 : selectedAmount * networkFeePercent
+  const networkFee = getNetworkFee(selectedAmount)
   const minimumReceived = selectedAmount - networkFee
 
   return (
